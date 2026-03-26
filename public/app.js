@@ -2,7 +2,8 @@
 // State
 let user = JSON.parse(localStorage.getItem('fixentra_user')) || null;
 let token = localStorage.getItem('fixentra_token') || null;
-const API_URL = 'http://localhost:8080';
+const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:8080' : window.location.origin;
+
 const GOOGLE_CLIENT_ID = ''; // Paste your real Google Client ID here (from console.cloud.google.com)
 let allServices = [];
 let currentCarouselSlide = 0;
