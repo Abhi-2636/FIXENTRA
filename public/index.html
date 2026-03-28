@@ -3,23 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fixentra | India's #1 Home Services Platform 🏠</title>
-    <meta name="description" content="Fixentra - Book verified electricians, plumbers, cleaners, carpenters at transparent prices. 10,000+ happy customers across India.">
-    <meta name="theme-color" content="#4f46e5">
+    <title>Fixentra | Patna's Trusted Home Services 🏠</title>
+    <meta name="description" content="Fixentra - Book verified electricians, plumbers, cleaners in Patna, Bihar. 30-day guarantee. Serving Boring Road, Kankarbagh, Rajendra Nagar & more.">
+    <meta name="theme-color" content="#0f62fe">
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
     <!-- Google Identity Services loaded dynamically by app.js when configured -->
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
+    <!-- Scroll Progress Bar -->
+    <div class="scroll-progress" id="scroll-progress"></div>
+
     <!-- Loading Screen (#14) -->
     <div id="loading-screen" class="loading-screen">
-        <div class="loading-logo">FIXENTRA.</div>
+        <div class="loading-logo" style="display:flex;align-items:center;gap:0.75rem;justify-content:center;"><img src="logo.svg" alt="Fixentra" style="width:50px;height:50px;object-fit:contain;">FIXENTRA.</div>
         <div class="loading-bar"><div class="loading-bar-inner"></div></div>
     </div>
 
@@ -64,24 +67,25 @@
     <!-- Navbar -->
     <nav role="navigation" aria-label="Main Navigation">
         <div class="container nav-content">
-            <a href="/" class="logo" aria-label="Fixentra Home">FIXENTRA.</a>
+            <a href="/" class="logo" aria-label="Fixentra Home" style="display:flex;align-items:center;gap:0.5rem;"><img src="logo.svg" alt="Fixentra" style="width:36px;height:36px;object-fit:contain;">FIXENTRA.</a>
             <div class="nav-links" id="nav-links">
-                <a onclick="showView('home')" role="button" tabindex="0">Home</a>
-                <a onclick="showView('services')" role="button" tabindex="0">Services</a>
-                <a onclick="showView('leaderboard')" role="button" tabindex="0">Top Experts</a>
-                <a onclick="showView('corporate')" role="button" tabindex="0">Corporate</a>
-                <div id="auth-buttons">
-                    <a onclick="showView('login')" role="button" tabindex="0">Login</a>
-                    <button class="btn btn-primary" onclick="showView('register')" aria-label="Get Started">Get Started</button>
+                <a id="nav-home" onclick="showView('home')" role="button" tabindex="0">Home</a>
+                <a id="nav-services" onclick="showView('services')" role="button" tabindex="0">Services</a>
+                <a id="nav-experts" onclick="showView('leaderboard')" role="button" tabindex="0">Top Experts</a>
+                <a id="nav-corporate" onclick="showView('corporate')" role="button" tabindex="0">Corporate</a>
+                <div id="auth-buttons" style="display:flex;align-items:center;gap:1rem;">
+                    <a onclick="showView('login')" role="button" tabindex="0" style="font-weight:600;font-size:0.95rem;">Login</a>
+                    <button class="btn btn-primary btn-glow" onclick="showView('register')" aria-label="Get Started" style="border-radius:100px;padding:0.5rem 1.2rem;">Get Started</button>
                 </div>
-                <div id="user-menu" style="display: none;">
-                    <a onclick="showView('dashboard')" role="button" tabindex="0">Dashboard</a>
-                    <button class="btn btn-primary" onclick="logout()" aria-label="Logout">Logout</button>
+                <div id="user-menu" style="display: none; align-items: center; gap: 1rem;">
+                    <a onclick="showView('dashboard')" role="button" tabindex="0" style="font-weight:600;font-size:0.95rem;">Dashboard</a>
+                    <button class="btn btn-primary" onclick="logout()" aria-label="Logout" style="border-radius:100px;padding:0.5rem 1.2rem;background:var(--danger);border-color:var(--danger);color:white;">Logout</button>
                 </div>
                 <!-- #46 Language Toggle -->
                 <div class="lang-toggle" aria-label="Language selector">
                     <button class="lang-btn active" onclick="setLang('en')" aria-label="English">EN</button>
                     <button class="lang-btn" onclick="setLang('hi')" aria-label="Hindi">हिं</button>
+                    <button class="lang-btn" onclick="setLang('bhoj')" aria-label="Bhojpuri">भोज</button>
                 </div>
                 <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode" aria-label="Toggle dark mode"></button>
             </div>
@@ -114,29 +118,208 @@
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal('booking-modal')">&times;</span>
             <h2 id="modal-title" style="background: var(--gradient-hero); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Book Service</h2>
-            <form id="booking-form" class="fade-in" style="margin-top: 2rem;">
+            <form id="booking-form" class="fade-in booking-flow" style="margin-top: 2rem;">
                 <input type="hidden" id="modal-service-id">
+                <input type="hidden" id="booking-mode" value="standard">
+
+                <div class="flow-stepper" id="booking-stepper">
+                    <button type="button" class="flow-step active" data-step="1" onclick="showBookingStep(1)">1. Scope</button>
+                    <button type="button" class="flow-step" data-step="2" onclick="showBookingStep(2)">2. Visit</button>
+                    <button type="button" class="flow-step" data-step="3" onclick="showBookingStep(3)">3. Confirm</button>
+                </div>
+
+                <div class="priority-banner" id="booking-priority-banner" style="display:none;"></div>
+
+                <section class="flow-panel active" data-step-panel="1">
+                    <div class="summary-shell" style="margin-bottom:1.5rem;">
+                        <div>
+                            <p class="summary-label">Selected Service</p>
+                            <h3 id="booking-service-name" style="margin-bottom:0.35rem;">Service</h3>
+                            <p style="color:var(--text-muted);font-size:0.9rem;">Instant locality ETA and transparent pricing update as you fill this form.</p>
+                        </div>
+                        <div class="summary-price" id="booking-starting-price">₹0</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Patna Locality</label>
+                        <select id="booking-locality" required>
+                            <option value="">Select your area in Patna</option>
+                            <option value="Boring Road">Boring Road</option>
+                            <option value="Kankarbagh">Kankarbagh</option>
+                            <option value="Rajendra Nagar">Rajendra Nagar</option>
+                            <option value="Patliputra Colony">Patliputra Colony</option>
+                            <option value="Bailey Road">Bailey Road</option>
+                            <option value="Danapur">Danapur</option>
+                            <option value="Rajeev Nagar">Rajeev Nagar</option>
+                            <option value="Anisabad">Anisabad</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="mini-grid">
+                        <div class="mini-stat-card">
+                            <span class="mini-stat-title">Current ETA</span>
+                            <strong id="booking-locality-eta">Choose locality</strong>
+                            <span class="mini-stat-meta" id="booking-locality-experts">Verified experts update here</span>
+                        </div>
+                        <div class="mini-stat-card">
+                            <span class="mini-stat-title">Trust Proof</span>
+                            <strong id="booking-locality-demand">Neighborhood activity</strong>
+                            <span class="mini-stat-meta" id="booking-locality-rating">Ratings and repeat rate</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>What needs attention?</label>
+                        <textarea id="booking-issue" placeholder="Describe the leak, fitting, cleaning request, appliance issue, or special instructions."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Issue Photo (Optional)</label>
+                        <label class="upload-card" for="booking-photo">
+                            <input type="file" id="booking-photo" accept="image/*" hidden>
+                            <span id="booking-photo-label">Upload a photo for faster expert matching</span>
+                            <small>We only store the file name in this demo flow.</small>
+                        </label>
+                        <small id="booking-photo-name" style="display:block;margin-top:0.5rem;color:var(--text-muted);"></small>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="triggerSOS()">Emergency Priority</button>
+                        <button type="button" class="btn btn-primary" onclick="nextBookingStep()">Continue →</button>
+                    </div>
+                </section>
+
+                <section class="flow-panel" data-step-panel="2">
+                    <div class="form-group">
+                        <label>Saved Home / Property</label>
+                        <div class="inline-action-row">
+                            <select id="booking-home-select">
+                                <option value="">Choose a saved property</option>
+                            </select>
+                            <button type="button" class="btn btn-outline" onclick="saveCurrentAddress()">Save Current</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Booking For</label>
+                        <select id="booking-family-profile">
+                            <option value="">Select a profile</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display:flex;justify-content:space-between;align-items:center;">
+                            <span>Full Service Address</span>
+                            <a href="javascript:void(0)" onclick="detectLocation()" style="color:var(--primary);font-size:0.8rem;font-weight:700;">📍 Auto-Detect</a>
+                        </label>
+                        <textarea id="booking-address" required placeholder="Flat no., building, street, landmark"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Payment Method</label>
+                        <select id="booking-payment-method" required>
+                            <option value="cash">Cash after service</option>
+                            <option value="online">Pay online now</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Coupon Code (Optional)</label>
+                        <div class="inline-action-row">
+                            <input type="text" id="booking-coupon" placeholder="e.g. PATNA50">
+                            <button type="button" class="btn btn-outline" onclick="applyCoupon()" id="apply-coupon-btn">Apply</button>
+                        </div>
+                        <small id="coupon-message" style="display:block;margin-top:0.5rem;"></small>
+                    </div>
+
+                    <div class="form-split">
+                        <div class="form-group">
+                            <label>Preferred Date</label>
+                            <input type="date" id="booking-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Time Slot</label>
+                            <select id="booking-timeslot" required>
+                                <option value="">Choose a time slot</option>
+                                <option value="08:00 AM - 10:00 AM">08:00 AM - 10:00 AM</option>
+                                <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM</option>
+                                <option value="12:00 PM - 02:00 PM">12:00 PM - 02:00 PM</option>
+                                <option value="02:00 PM - 04:00 PM">02:00 PM - 04:00 PM</option>
+                                <option value="04:00 PM - 06:00 PM">04:00 PM - 06:00 PM</option>
+                                <option value="06:00 PM - 08:00 PM">06:00 PM - 08:00 PM</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" onclick="prevBookingStep()">← Back</button>
+                        <button type="button" class="btn btn-primary" onclick="nextBookingStep()">Review Summary</button>
+                    </div>
+                </section>
+
+                <section class="flow-panel" data-step-panel="3">
+                    <div class="estimator-card" id="booking-estimator-card">
+                        <div class="summary-shell">
+                            <div>
+                                <p class="summary-label">Transparent Estimate</p>
+                                <h3 id="booking-summary-title" style="margin-bottom:0.35rem;">Review your booking</h3>
+                                <p style="color:var(--text-muted);font-size:0.9rem;">We show locality ETA, service guarantee, and final payable amount before confirmation.</p>
+                            </div>
+                            <div class="summary-price" id="booking-estimated-total">₹0</div>
+                        </div>
+                        <div class="summary-list">
+                            <div class="summary-row"><span>Service</span><strong id="booking-summary-service">-</strong></div>
+                            <div class="summary-row"><span>Property / Family</span><strong id="booking-summary-family">-</strong></div>
+                            <div class="summary-row"><span>Visit slot</span><strong id="booking-summary-visit">-</strong></div>
+                            <div class="summary-row"><span>Payment</span><strong id="booking-summary-payment">-</strong></div>
+                            <div class="summary-row"><span>Discount</span><strong id="booking-summary-discount">No coupon</strong></div>
+                            <div class="summary-row"><span>Priority</span><strong id="booking-summary-priority">Standard</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="mini-grid">
+                        <div class="mini-stat-card">
+                            <span class="mini-stat-title">Expected Arrival</span>
+                            <strong id="booking-summary-eta">-</strong>
+                            <span class="mini-stat-meta">Based on your selected locality</span>
+                        </div>
+                        <div class="mini-stat-card">
+                            <span class="mini-stat-title">Included Promise</span>
+                            <strong>30-day rework</strong>
+                            <span class="mini-stat-meta">Verified pro, insured visit, support on WhatsApp</span>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" onclick="prevBookingStep()">← Back</button>
+                        <button type="submit" class="btn btn-primary btn-lg" style="width:auto;">✨ Confirm Booking</button>
+                    </div>
+                </section>
+            </form>
+        </div>
+    </div>
+
+    <!-- Review Modal -->
+    <div id="review-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('review-modal')">&times;</span>
+            <h2 style="margin-bottom:1rem;">Leave a Review ⭐</h2>
+            <p id="review-service-name" style="color:var(--text-muted);margin-bottom:1.5rem;"></p>
+            <form id="review-form">
+                <input type="hidden" id="review-provider-id">
                 <div class="form-group">
-                    <label>Service Address</label>
-                    <textarea id="booking-address" required placeholder="Flat no., Building, Street, City"></textarea>
+                    <label>Rating (1-5)</label>
+                    <div style="font-size:2rem;display:flex;gap:0.5rem;cursor:pointer;" id="review-stars">
+                        <span data-val="1">⭐</span><span data-val="2">⭐</span><span data-val="3">⭐</span><span data-val="4">⭐</span><span data-val="5">⭐</span>
+                    </div>
+                    <input type="hidden" id="review-rating" value="5" required>
                 </div>
                 <div class="form-group">
-                    <label>Preferred Date</label>
-                    <input type="date" id="booking-date" required>
+                    <label>Your Review</label>
+                    <textarea id="review-text" required placeholder="How was the service? Your review helps other Patna users!" rows="3"></textarea>
                 </div>
-                <div class="form-group">
-                    <label>Time Slot</label>
-                    <select id="booking-timeslot" required>
-                        <option value="">Choose a time slot</option>
-                        <option value="08:00 AM - 10:00 AM">08:00 AM - 10:00 AM (Early Bird)</option>
-                        <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM</option>
-                        <option value="12:00 PM - 02:00 PM">12:00 PM - 02:00 PM</option>
-                        <option value="02:00 PM - 04:00 PM">02:00 PM - 04:00 PM</option>
-                        <option value="04:00 PM - 06:00 PM">04:00 PM - 06:00 PM</option>
-                        <option value="06:00 PM - 08:00 PM">06:00 PM - 08:00 PM (Evening)</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">✨ Confirm Booking</button>
+                <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">Submit Review 🚀</button>
             </form>
         </div>
     </div>
@@ -146,6 +329,13 @@
         <div class="modal-content" style="max-width: 600px;">
             <span class="close-modal" onclick="closeModal('service-detail-modal')">&times;</span>
             <div id="service-detail-content"></div>
+        </div>
+    </div>
+
+    <div id="expert-detail-modal" class="modal">
+        <div class="modal-content" style="max-width: 680px;">
+            <span class="close-modal" onclick="closeModal('expert-detail-modal')">&times;</span>
+            <div id="expert-detail-content"></div>
         </div>
     </div>
 
@@ -177,5 +367,15 @@
     </div>
 
     <script src="app.js"></script>
+    <script>
+        // PWA Service Worker Registration (#29)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('ServiceWorker registered:', reg.scope))
+                    .catch(err => console.log('ServiceWorker registration failed:', err));
+            });
+        }
+    </script>
 </body>
 </html>

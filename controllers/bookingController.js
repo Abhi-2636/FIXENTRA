@@ -4,8 +4,46 @@ const User = require('../models/User');
 // Create a booking
 exports.createBooking = async (req, res) => {
     try {
-        const { serviceId, providerId, address, date, timeSlot } = req.body;
-        
+        const Service = require('../models/Service');
+        const Coupon = require('../models/Coupon');
+        const {
+            serviceId,
+            providerId,
+            address,
+            date,
+            timeSlot,
+            paymentMethod,
+            couponCode,
+            locality,
+            priorityType,
+            issueNote,
+            issuePhotoName,
+            familyProfile,
+            addressLabel
+        } = req.body;
+
+        const service = await Service.findById(serviceId);
+        if (!service) return res.status(404).json({ message: 'Service not found.' });
+
+        let amount = service.price;
+        let discount = 0;
+        const normalizedPriority = priorityType === 'emergency' ? 'emergency' : 'standard';
+
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+            if (coupon && coupon.isValid()) {
+                discount = coupon.discount;
+                amount = amount - (amount * (discount / 100));
+                coupon.usedCount += 1;
+                await coupon.save();
+            }
+        }
+
+        if (normalizedPriority === 'emergency') {
+            amount = amount + (amount * 0.5);
+        }
+        amount = Math.round(amount);
+
         // Prevent double booking for same provider at same time
         if (providerId) {
             const existingBooking = await Booking.findOne({ providerId, date, timeSlot });
@@ -19,9 +57,23 @@ exports.createBooking = async (req, res) => {
             serviceId,
             providerId,
             address,
+            locality: locality || 'Patna',
+            addressLabel: addressLabel || null,
+            familyProfile: familyProfile || null,
+            issueNote: issueNote || null,
+            issuePhotoName: issuePhotoName || null,
+            priorityType: normalizedPriority,
             date,
-            timeSlot
+            timeSlot,
+            paymentMethod: paymentMethod || 'cash',
+            amount,
+            discount,
+            couponCode: couponCode ? couponCode.toUpperCase() : null
         });
+
+        // WhatsApp Notification Mock (Patna users highly prefer WhatsApp)
+        console.log(`\n\n✅ [WHATSAPP API MOCK] Message dispatched to ${req.user.phone || 'customer'}`);
+        console.log(`"Fixentra: Booking Confirmed! 🚀 Your expert will arrive at ${timeSlot} on ${new Date(date).toDateString()}. Team Patna."\n\n`);
 
         res.status(201).json({
             status: 'success',
@@ -38,7 +90,7 @@ exports.getProviderJobs = async (req, res) => {
         const jobs = await Booking.find({ providerId: req.user._id })
             .populate('userId', 'name phone email')
             .populate('serviceId', 'name category price');
-            
+
         res.status(200).json({
             status: 'success',
             results: jobs.length,
@@ -112,14 +164,37 @@ exports.getAllBookings = async (req, res) => {
 exports.assignProvider = async (req, res) => {
     try {
         const { providerId } = req.body;
-        const booking = await Booking.findByIdAndUpdate(req.params.id, 
-            { providerId, status: 'assigned' }, 
+        const booking = await Booking.findByIdAndUpdate(req.params.id,
+            { providerId, status: 'assigned' },
             { new: true, runValidators: true }
         );
 
         if (!booking) {
             return res.status(404).json({ message: 'Booking not found.' });
         }
+
+        res.status(200).json({
+            status: 'success',
+            data: { booking }
+        });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
+    }
+};
+
+// Cancel a booking (User)
+exports.cancelBooking = async (req, res) => {
+    try {
+        const booking = await Booking.findOne({ _id: req.params.id, userId: req.user._id });
+        if (!booking) {
+            return res.status(404).json({ message: 'Booking not found or not authorized.' });
+        }
+        if (booking.status === 'completed' || booking.status === 'cancelled') {
+            return res.status(400).json({ message: 'This booking cannot be cancelled.' });
+        }
+
+        booking.status = 'cancelled';
+        await booking.save();
 
         res.status(200).json({
             status: 'success',

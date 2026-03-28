@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="10" y1="10" x2="38" y2="38" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect x="2" y="2" width="44" height="44" rx="12" fill="url(#g1)"/>
+  <!-- House roof -->
+  <path d="M24 10L10 22h4v12h20V22h4L24 10z" fill="white" opacity="0.15"/>
+  <path d="M24 12L12 22h3.5v10h17V22H36L24 12z" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Wrench icon inside house -->
+  <path d="M28.5 21a3.5 3.5 0 0 0-3.2 2.1l-5.8 5.8a1.2 1.2 0 1 0 1.7 1.7l5.8-5.8A3.5 3.5 0 1 0 28.5 21z" fill="white" opacity="0.9"/>
+  <!-- Dot accent -->
+  <circle cx="20" cy="29" r="1.2" fill="#06b6d4"/>
+</svg>

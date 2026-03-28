@@ -29,15 +29,57 @@ const bookingSchema = new mongoose.Schema({
         required: [true, 'A booking must have a time slot'],
         trim: true
     },
+    locality: {
+        type: String,
+        trim: true,
+        default: 'Patna'
+    },
+    addressLabel: {
+        type: String,
+        trim: true,
+        default: null
+    },
+    familyProfile: {
+        type: String,
+        trim: true,
+        default: null
+    },
+    issueNote: {
+        type: String,
+        trim: true,
+        default: null
+    },
+    issuePhotoName: {
+        type: String,
+        trim: true,
+        default: null
+    },
+    priorityType: {
+        type: String,
+        enum: ['standard', 'emergency'],
+        default: 'standard'
+    },
     status: {
         type: String,
-        enum: ['pending', 'accepted', 'completed', 'rejected', 'assigned'],
+        enum: ['pending', 'accepted', 'completed', 'rejected', 'assigned', 'cancelled'],
         default: 'pending'
     },
     paymentStatus: {
         type: String,
         enum: ['pending', 'paid', 'failed'],
         default: 'pending'
+    },
+    amount: {
+        type: Number,
+        default: 0
+    },
+    discount: {
+        type: Number,
+        default: 0
+    },
+    couponCode: {
+        type: String,
+        default: null
     },
     paymentMethod: {
         type: String,

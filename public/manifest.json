@@ -1,21 +1,21 @@
 {
-  "name": "Fixentra",
-  "short_name": "Fixentra",
-  "description": "India's #1 Home Services Platform",
+  "name": "Fixentra Home Services Patna",
+  "short_name": "Fixentra Patna",
+  "description": "Patna's Trusted Premium Home Services Platform. Book verified electricians, plumbers, and cleaning professionals instantly.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#4f46e5",
   "icons": [
     {
-      "src": "hero.png",
+      "src": "logo.svg",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/svg+xml"
     },
     {
-      "src": "hero.png",
+      "src": "logo.svg",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/svg+xml"
     }
   ]
 }

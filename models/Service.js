@@ -9,7 +9,7 @@ const serviceSchema = new mongoose.Schema({
     category: {
         type: String,
         required: [true, 'Please provide the service category'],
-        enum: ['maid', 'electrician', 'plumber', 'appliance repair', 'cleaning', 'carpenter'],
+        enum: ['maid', 'electrician', 'plumber', 'appliance repair', 'cleaning', 'carpenter', 'painter', 'pest control'],
         trim: true
     },
     price: {
@@ -19,6 +19,14 @@ const serviceSchema = new mongoose.Schema({
     description: {
         type: String,
         trim: true
+    },
+    photo: {
+        type: String,
+        default: 'service-default.png'
+    },
+    rating: {
+        type: Number,
+        default: 4.8
     }
 }, {
     timestamps: true

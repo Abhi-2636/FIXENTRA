@@ -19,8 +19,8 @@ exports.generateInvoice = async (req, res) => {
 
         // Add company info
         doc.fontSize(25).font('Helvetica-Bold').text('Fixentra.', 50, 50);
-        doc.fontSize(10).font('Helvetica').text('123 Startup Hub', 50, 80);
-        doc.text('New Delhi, India', 50, 95);
+        doc.fontSize(10).font('Helvetica').text('Boring Road', 50, 80);
+        doc.text('Patna, Bihar', 50, 95);
         
         // Add invoice details
         doc.fontSize(20).text('INVOICE', 450, 50, { align: 'right' });
