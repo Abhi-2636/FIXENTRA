@@ -1,47 +1,93 @@
-# Fixentra Backend - "Your Home, Our Expertise" 🏠🔧
+# Fixentra Backend
 
-Fixentra is a complete home services platform backend built on the Node.js, Express, and MongoDB (Mongoose) stack, tailored for the Indian market. It handles authentication, service categorization, booking management, and provider reviews.
+<div align="center">
 
-## Features ✨
+**"Your Home, Our Expertise"**
 
-- **MVC Architecture:** Clean, scalable, and industry-standard folder structure.
-- **JWT Authentication:** Secure login & registration with role-based access control (Admin, Provider, User).
-- **Service Management:** Full CRUD for service categories like Maid, Electrician, Plumber, Carpenter, etc.
-- **Booking Engine:** Users can book services with specific dates and time slots.
-- **Provider Dashboard:** Providers can see assigned jobs, accept/reject bookings, and update job status.
-- **Admin Panel:** Complete overview of all users, services, and bookings with provider assignment capabilities.
-- **Double Booking Prevention:** Logical checks to ensure a provider isn't booked twice for the same slot.
+A Node.js + Express + MongoDB (Mongoose) backend for a home-services platform, tailored for the Indian market.
 
-## Project Structure 📂
+</div>
 
-```
+---
+
+## Quick links
+
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Environment variables](#environment-variables)
+- [API overview](#api-overview)
+- [Sample requests](#sample-requests)
+- [Contributing](#contributing)
+
+---
+
+## Features
+
+| Area | What you get |
+|---|---|
+| Architecture | MVC folder structure for clean separation of concerns |
+| Auth | JWT-based auth with role-based access (Admin / Provider / User) |
+| Services | CRUD for service categories (Maid, Electrician, Plumber, Carpenter, etc.) |
+| Bookings | Book by date + time slot with basic slot validation |
+| Provider dashboard | View assigned jobs, accept/reject, update job status |
+| Admin panel | Manage users/services/bookings + assign providers |
+| Safety | Double-booking prevention for the same provider + time slot |
+
+---
+
+## Tech stack
+
+- **Runtime:** Node.js
+- **Framework:** Express.js
+- **Database:** MongoDB + Mongoose
+- **Security:** JWT, bcrypt
+- **Middleware / tooling:** Morgan, CORS
+
+---
+
+## Project structure
+
+```text
 FIXENTRA/
-├── config/             # Database & Config
-├── controllers/        # Business Logic
-├── middleware/         # Auth & Validation
-├── models/             # Database Schemas
-├── routes/             # API Endpoints
-├── .env.example        # Env Template
-├── server.js           # Entry Point
+├── config/             # Database & configuration
+├── controllers/        # Business logic
+├── middleware/         # Auth & validation
+├── models/             # Database schemas
+├── routes/             # API endpoints
+├── .env.example        # Environment template
+├── server.js           # Entry point
 └── package.json        # Dependencies
 ```
 
-## Getting Started 🚀
+---
 
-### 1. Prerequisites
+## Getting started
+
+### 1) Prerequisites
+
 - [Node.js](https://nodejs.org/) (v14+)
-- [MongoDB Atlas Account](https://www.mongodb.com/cloud/atlas)
+- [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) account (or local MongoDB)
 
-### 2. Installation
-Clone the repository and install dependencies:
+### 2) Install
 
 ```bash
 cd FIXENTRA
 npm install
 ```
 
-### 3. Setup Environment Variables
-Create a `.env` file in the root directory and copy the contents from `.env.example`. Fill in your MongoDB connection string and JWT secret.
+### 3) Run
+
+```bash
+npm start
+```
+
+---
+
+## Environment variables
+
+Create a `.env` file in the project root and copy values from `.env.example`.
 
 ```env
 PORT=5000
@@ -51,42 +97,44 @@ JWT_SECRET=your_jwt_secret
 JWT_EXPIRES_IN=30d
 ```
 
-### 4. Run the Server
-```bash
-# Start in development mode
-npm start
-```
+---
 
-## API Documentation 📝
+## API overview
 
-### Auth Routes (`/api/auth`)
-- `POST /register`: Register a new user/provider/admin.
-- `POST /login`: Login to receive a JWT token.
+### Auth (`/api/auth`)
 
-### Service Routes (`/api/services`)
-- `GET /`: List all available services (Public).
-- `POST /`: Create a new service (Admin only).
-- `PATCH /:id`: Update service details (Admin only).
-- `DELETE /:id`: Delete a service (Admin only).
+- `POST /register` — Register a new user/provider/admin
+- `POST /login` — Login and receive a JWT
 
-### Booking Routes (`/api/bookings`)
-- `POST /`: Book a service (User).
-- `GET /history`: View user's past and upcoming bookings (User).
-- `GET /jobs`: View assigned jobs (Provider).
-- `PATCH /jobs/:id`: Update job status (Provider - accepted, completed).
-- `GET /`: View all bookings in the system (Admin).
-- `PATCH /:id/assign`: Assign a provider to a booking (Admin).
+### Services (`/api/services`)
 
-### Review Routes (`/api/reviews`)
-- `POST /`: Submit feedback for a provider (User).
-- `GET /providers/:providerId`: View reviews for a specific provider (Public).
+- `GET /` — List all available services (public)
+- `POST /` — Create a new service (admin only)
+- `PATCH /:id` — Update service details (admin only)
+- `DELETE /:id` — Delete service (admin only)
 
-## Sample Postman Requests 📬
+### Bookings (`/api/bookings`)
 
-### 1. Register User
-**Method:** `POST`
-**URL:** `{{BASE_URL}}/api/auth/register`
-**Body:**
+- `POST /` — Book a service (user)
+- `GET /history` — User booking history (user)
+- `GET /jobs` — Assigned jobs (provider)
+- `PATCH /jobs/:id` — Update job status (provider)
+- `GET /` — View all bookings (admin)
+- `PATCH /:id/assign` — Assign provider to booking (admin)
+
+### Reviews (`/api/reviews`)
+
+- `POST /` — Submit provider feedback (user)
+- `GET /providers/:providerId` — Provider reviews (public)
+
+---
+
+## Sample requests
+
+### Register (User)
+
+**POST** `{{BASE_URL}}/api/auth/register`
+
 ```json
 {
   "name": "Jane Doe",
@@ -98,10 +146,10 @@ npm start
 }
 ```
 
-### 2. Login
-**Method:** `POST`
-**URL:** `{{BASE_URL}}/api/auth/login`
-**Body:**
+### Login
+
+**POST** `{{BASE_URL}}/api/auth/login`
+
 ```json
 {
   "email": "jane@example.com",
@@ -109,11 +157,12 @@ npm start
 }
 ```
 
-### 3. Create Service (Admin)
-**Method:** `POST`
-**URL:** `{{BASE_URL}}/api/services`
-**Header:** `Authorization: Bearer <ADMIN_TOKEN>`
-**Body:**
+### Create service (Admin)
+
+**POST** `{{BASE_URL}}/api/services`
+
+Header: `Authorization: Bearer <ADMIN_TOKEN>`
+
 ```json
 {
   "name": "Deep Apartment Cleaning",
@@ -123,24 +172,29 @@ npm start
 }
 ```
 
-### 4. Create Booking
-**Method:** `POST`
-**URL:** `{{BASE_URL}}/api/bookings`
-**Header:** `Authorization: Bearer <USER_TOKEN>`
-**Body:**
+### Create booking
+
+**POST** `{{BASE_URL}}/api/bookings`
+
+Header: `Authorization: Bearer <USER_TOKEN>`
+
 ```json
 {
   "serviceId": "<SERVICE_ID>",
   "address": "456 Side St, Queens",
-  "date": "2023-11-25",
+  "date": "2026-03-28",
   "timeSlot": "10:00 AM - 12:00 PM"
 }
 ```
 
-## Technologies Used 🛠️
-- **Node.js**
-- **Express.js**
-- **MongoDB & Mongoose**
-- **JWT (JsonWebToken)**
-- **Bcrypt.js**
-- **Morgan & CORS**
+---
+
+## Contributing
+
+Contributions are welcome.
+
+- Fork the repo
+- Create a feature branch: `git checkout -b feature/my-change`
+- Commit: `git commit -m "Add my change"`
+- Push: `git push origin feature/my-change`
+- Open a Pull Request
