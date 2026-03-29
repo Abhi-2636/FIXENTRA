@@ -2,7 +2,7 @@
 // State
 let user = JSON.parse(localStorage.getItem('fixentra_user')) || null;
 let token = localStorage.getItem('fixentra_token') || null;
-const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8080' : '';
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8080' : 'https://fixentra.onrender.com';
 
 let GOOGLE_CLIENT_ID = ''; // Will be hydrated from backend automatically
 let allServices = [];
@@ -3508,7 +3508,7 @@ let currentChatBookingId = null;
 
 function initSocket() {
     if (socket) return;
-    socket = io();
+    socket = io(API_URL);
 
     socket.on('receive_message', (data) => {
         if (currentChatBookingId === data.bookingId) {
