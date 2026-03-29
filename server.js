@@ -29,19 +29,21 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false
 }));
 
-// Rate Limiting
-const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 200,
-    message: { status: 'error', message: 'Too many requests. Please try again later.' },
-    standardHeaders: true,
-    legacyHeaders: false
-});
-app.use('/api/', limiter);
+// Rate Limiting (Disabled in serverless to prevent IP collisions through Lambda)
+if (!process.env.SERVERLESS) {
+    const limiter = rateLimit({
+        windowMs: 15 * 60 * 1000,
+        max: 200,
+        message: { status: 'error', message: 'Too many requests. Please try again later.' },
+        standardHeaders: true,
+        legacyHeaders: false
+    });
+    app.use('/api/', limiter);
+}
 
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    max: 100, // increased for serverless
     message: { status: 'error', message: 'Too many login attempts. Try again in 15 minutes.' }
 });
 app.use('/api/auth/', authLimiter);
