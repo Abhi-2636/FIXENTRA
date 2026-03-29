@@ -1,5 +1,5 @@
 const crypto = require('crypto');
-const Booking = require('../models/Booking');
+const { supabaseAdmin } = require('../config/supabase');
 
 // Check if real Razorpay keys are configured
 const hasRealKeys = process.env.RAZORPAY_KEY_ID && !process.env.RAZORPAY_KEY_ID.includes('placeholder');
@@ -17,9 +17,8 @@ if (hasRealKeys) {
 exports.createOrder = async (req, res) => {
     try {
         const { amount, currency = "INR", receipt } = req.body;
-        
+
         if (razorpay) {
-            // Real Razorpay flow
             const options = {
                 amount: amount * 100,
                 currency,
@@ -31,7 +30,6 @@ exports.createOrder = async (req, res) => {
             }
             res.json({ status: 'success', data: order, key_id: process.env.RAZORPAY_KEY_ID, mode: 'live' });
         } else {
-            // Simulated payment flow (development mode)
             const simulatedOrder = {
                 id: `order_sim_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`,
                 amount: amount * 100,
@@ -54,7 +52,6 @@ exports.verifyPayment = async (req, res) => {
         let isAuthentic = false;
 
         if (hasRealKeys && razorpay_signature) {
-            // Real Razorpay verification
             const body = razorpay_order_id + "|" + razorpay_payment_id;
             const expectedSignature = crypto
                 .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -62,13 +59,14 @@ exports.verifyPayment = async (req, res) => {
                 .digest('hex');
             isAuthentic = expectedSignature === razorpay_signature;
         } else if (razorpay_order_id && razorpay_order_id.startsWith('order_sim_')) {
-            // Simulated payment is always authentic
             isAuthentic = true;
         }
 
         if (isAuthentic) {
             if (bookingId) {
-                await Booking.findByIdAndUpdate(bookingId, { paymentStatus: 'paid' });
+                await supabaseAdmin.from('bookings')
+                    .update({ payment_status: 'paid' })
+                    .eq('id', bookingId);
             }
             res.json({ status: 'success', message: 'Payment verified successfully' });
         } else {
@@ -78,4 +76,3 @@ exports.verifyPayment = async (req, res) => {
         res.status(500).json({ status: 'error', message: error.message });
     }
 };
-

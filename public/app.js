@@ -19,6 +19,8 @@ let bookingMode = 'standard';
 let bookingIssuePhotoName = '';
 let preferredLocality = '';
 let providerDirectory = [];
+let publicProviderCatalog = [];
+let publicProviderCatalogLoaded = false;
 let activeRoute = '';
 
 const localityInsights = [
@@ -36,6 +38,7 @@ const featuredExperts = [
         name: 'Suresh Kumar',
         role: 'Senior Electrician',
         emoji: '👨‍🔧',
+        image: 'expert-electrician.svg',
         rating: '4.9',
         jobs: '128',
         eta: '16 mins',
@@ -51,6 +54,7 @@ const featuredExperts = [
         name: 'Rahul Verma',
         role: 'Deep Cleaning Lead',
         emoji: '🧹',
+        image: 'expert-cleaner.svg',
         rating: '5.0',
         jobs: '240',
         eta: '22 mins',
@@ -66,6 +70,7 @@ const featuredExperts = [
         name: 'Priya Kumari',
         role: 'Appliance Guard',
         emoji: '👩‍🔧',
+        image: 'expert-appliance.svg',
         rating: '4.8',
         jobs: '76',
         eta: '24 mins',
@@ -81,6 +86,7 @@ const featuredExperts = [
         name: 'Aman Singh',
         role: 'Master Plumber',
         emoji: '🔧',
+        image: 'expert-plumber.svg',
         rating: '4.8',
         jobs: '92',
         eta: '19 mins',
@@ -164,6 +170,21 @@ function writeStoredJSON(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
 }
 
+function toTitleCase(value) {
+    return String(value || '')
+        .split(' ')
+        .filter(Boolean)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
+function normalizeImageSrc(path) {
+    if (!path) return '';
+    const normalized = String(path).replace(/\\/g, '/');
+    if (/^(https?:)?\/\//.test(normalized)) return normalized;
+    return normalized.startsWith('/') ? normalized : `/${normalized}`;
+}
+
 let savedAddresses = readStoredJSON('fixentra_saved_addresses', defaultSavedAddresses);
 let familyProfiles = readStoredJSON('fixentra_family_profiles', defaultFamilyProfiles);
 let newsletterSubscribers = readStoredJSON('fixentra_newsletter_subscribers', []);
@@ -173,21 +194,231 @@ let savedPlanInterests = readStoredJSON('fixentra_plan_interest', []);
 const infoPages = {
     about: {
         title: 'About Fixentra',
-        body: 'Fixentra is building a hyperlocal home-services experience for Patna that feels faster, safer, and easier than calling random neighborhood vendors. The UX now focuses on transparent pricing, verified experts, saved homes, and repeat-booking convenience.'
+        kicker: 'ABOUT FIXENTRA',
+        intro: 'Fixentra is designed for people who want premium home service booking without the uncertainty of random neighborhood vendors. The product focuses on speed, trust, and repeat convenience for Patna households.',
+        stats: [
+            { value: '8+', label: 'Patna localities covered' },
+            { value: '50+', label: 'Verified service professionals' },
+            { value: '30-day', label: 'Rework guarantee promise' }
+        ],
+        highlights: [
+            'Transparent pricing before confirmation',
+            'Verified experts with stronger profile depth',
+            'Saved homes, family booking, and repeat flows'
+        ],
+        sections: [
+            {
+                title: 'What we solve',
+                body: 'Booking a plumber, electrician, cleaner, or appliance expert should not depend on random calls and uncertain price negotiation. Fixentra turns that into a structured, screen-friendly experience.'
+            },
+            {
+                title: 'How the platform works',
+                body: 'Users choose a locality, describe the issue, compare pricing, and book from a guided flow with ETA context, issue notes, saved addresses, and payment visibility.'
+            },
+            {
+                title: 'Why customers come back',
+                body: 'Repeat trust matters more than flashy marketing. That is why the product includes loyalty, memberships, expert profiles, and booking shortcuts for families and multi-home users.'
+            }
+        ],
+        ctaLabel: 'Explore Services',
+        ctaView: 'services'
     },
     careers: {
         title: 'Careers',
-        body: 'We are hiring across operations, provider growth, customer success, and city expansion. This page now works as a real info surface instead of a dead footer link.'
+        kicker: 'CAREERS',
+        intro: 'We are building a stronger home-services experience for Patna and future city expansion. We hire people who care about operations quality, trustworthy service delivery, and customer experience that actually works.',
+        stats: [
+            { value: '4', label: 'Core teams hiring' },
+            { value: '3', label: 'Interview stages' },
+            { value: 'Hybrid', label: 'Work style by role' }
+        ],
+        highlights: [
+            'Operations and city growth',
+            'Customer success and support',
+            'Provider onboarding and quality control'
+        ],
+        sections: [
+            {
+                title: 'Current focus roles',
+                body: 'We are most interested in operations managers, provider-success associates, customer support leads, and growth generalists who can execute with limited hand-holding.'
+            },
+            {
+                title: 'What working here feels like',
+                body: 'This is a service business with product thinking. The work is practical, fast-moving, and measurable. We value people who can simplify messy real-world problems.'
+            },
+            {
+                title: 'How to apply',
+                body: 'Send your profile and a short note about which function you want to own. Strong applications usually show evidence of execution, ownership, and comfort with customer-facing operations.'
+            }
+        ],
+        ctaLabel: 'Contact Us',
+        ctaView: 'corporate'
     },
     terms: {
         title: 'Terms & Conditions',
-        body: 'Bookings are subject to locality coverage, provider availability, and transparent pricing disclosed before confirmation. Emergency visits carry a surcharge. Rework guarantee applies to supported service categories.'
+        kicker: 'TERMS & CONDITIONS',
+        intro: 'These terms define the practical rules around booking, pricing, cancellations, payments, and service delivery on Fixentra.',
+        stats: [
+            { value: 'Standard', label: 'Visits available citywide' },
+            { value: '50%', label: 'Emergency priority surcharge' },
+            { value: '30-day', label: 'Eligible rework window' }
+        ],
+        highlights: [
+            'Bookings depend on locality coverage and expert availability',
+            'Emergency slots may carry higher pricing than standard visits',
+            'Rework applies only to supported service categories and scopes'
+        ],
+        sections: [
+            {
+                title: 'Booking scope',
+                body: 'A booking confirms the selected service category, locality, date, and time slot. Final scope can still depend on on-site inspection for hidden damage or additional material requirements.'
+            },
+            {
+                title: 'Pricing and payment',
+                body: 'Fixentra shows pricing before confirmation whenever possible. Final amounts can change only if the requested work expands beyond the original problem statement or material requirement.'
+            },
+            {
+                title: 'Cancellation and rescheduling',
+                body: 'Users can cancel eligible bookings before completion. Repeated last-minute cancellations or misuse of emergency booking may result in account restrictions.'
+            },
+            {
+                title: 'Service quality promise',
+                body: 'The 30-day rework guarantee applies to supported service types and only to the specific work delivered through the booking. It does not cover unrelated future issues or external damage.'
+            }
+        ],
+        ctaLabel: 'Book a Service',
+        ctaView: 'services'
     },
     privacy: {
         title: 'Privacy Policy',
-        body: 'User account details, saved homes, uploaded issue metadata, and booking history are used to improve repeat booking and support experience. Payment verification and communication logs are handled through secured backend routes.'
+        kicker: 'PRIVACY POLICY',
+        intro: 'Fixentra collects only the information needed to support booking, communication, payments, and repeat customer convenience.',
+        stats: [
+            { value: 'Profile', label: 'Name, phone, address' },
+            { value: 'Booking', label: 'Service and issue metadata' },
+            { value: 'Support', label: 'Chat and payment context' }
+        ],
+        highlights: [
+            'We use saved addresses and family profiles to reduce repeat booking friction',
+            'Issue notes and photo names help experts prepare before arrival',
+            'Payment and communication events are kept for support and auditing'
+        ],
+        sections: [
+            {
+                title: 'What we collect',
+                body: 'Account details, addresses, booking preferences, service history, issue descriptions, payment method choices, and communication metadata may be stored to run the platform.'
+            },
+            {
+                title: 'How we use the data',
+                body: 'The data is used to confirm bookings, match experts, support customer service, improve repeat flows, and maintain booking records for operational quality and trust.'
+            },
+            {
+                title: 'What we do not claim',
+                body: 'We do not present unnecessary personal data publicly. Sensitive payment processing is handled through the configured payment flow rather than exposed in the front-end application.'
+            },
+            {
+                title: 'User control',
+                body: 'Users can update core profile details from account settings. Additional deletion or policy requests should be sent through the official support channel.'
+            }
+        ],
+        ctaLabel: 'Open Settings',
+        ctaView: 'dashboard'
     }
 };
+
+function mapProviderToExpert(provider) {
+    const skillLabel = provider.skills?.[0] ? toTitleCase(provider.skills[0]) : 'Home Service Expert';
+    const workingArea = provider.workingLocalities?.[0] || provider.address?.split(',')[0] || 'Patna';
+    return {
+        id: provider._id,
+        name: provider.name,
+        role: skillLabel,
+        emoji: '👷',
+        image: provider.profileImage || 'expert-electrician.svg',
+        rating: String(provider.rating || 4.7),
+        jobs: String(provider.completedJobs || 0),
+        eta: `${provider.estimatedArrivalMins || provider.responseTimeMins || 18} mins`,
+        area: workingArea,
+        languages: 'Hindi, English',
+        badges: [
+            provider.availabilityStatus === 'available' ? 'Available Now' : 'Verified Provider',
+            `${provider.experience || 0}+ yrs experience`
+        ],
+        bio: provider.skills?.length
+            ? `Available for ${provider.skills.map(skill => toTitleCase(skill)).join(', ')} bookings with stronger locality-based assignment.`
+            : 'Verified Fixentra service professional available for scheduled and priority visits.',
+        highlights: [
+            `${provider.completedJobs || 0}+ completed jobs`,
+            `${provider.estimatedArrivalMins || provider.responseTimeMins || 18} min response estimate`,
+            provider.workingLocalities?.length ? `Covers ${provider.workingLocalities.join(', ')}` : 'Patna city coverage'
+        ],
+        services: provider.skills?.length ? provider.skills.map(skill => toTitleCase(skill)) : ['General Home Services']
+    };
+}
+
+function getFeaturedExpertsData() {
+    if (publicProviderCatalog.length) {
+        return [...publicProviderCatalog]
+            .sort((a, b) => {
+                const availabilityScore = { available: 3, busy: 2, limited: 1, 'slot-booked': 0 };
+                return (availabilityScore[b.availabilityStatus] || 0) - (availabilityScore[a.availabilityStatus] || 0)
+                    || (b.rating || 0) - (a.rating || 0)
+                    || (b.completedJobs || 0) - (a.completedJobs || 0);
+            })
+            .slice(0, 6)
+            .map(mapProviderToExpert);
+    }
+    return featuredExperts;
+}
+
+function getServicePrimaryImage(service = {}) {
+    const fallbackExpert = featuredExperts.find(item => getExpertCategory(item) === String(service.category || '').toLowerCase());
+    return normalizeImageSrc(service.photoUrl || service.photo || fallbackExpert?.image || 'hero.png');
+}
+
+function getServiceGallery(service = {}) {
+    const gallerySources = Array.isArray(service.galleryUrls) && service.galleryUrls.length
+        ? service.galleryUrls
+        : Array.isArray(service.gallery)
+            ? service.gallery
+            : [];
+    const images = [service.photoUrl, service.photo, ...gallerySources]
+        .map(normalizeImageSrc)
+        .filter(Boolean);
+    if (!images.length) {
+        images.push(getServicePrimaryImage(service));
+    }
+    return [...new Set(images)].slice(0, 6);
+}
+
+function getServiceIncluded(service = {}) {
+    if (Array.isArray(service.included) && service.included.length) {
+        return service.included;
+    }
+    return ['Verified professional', 'Transparent pricing', '30-day rework support'];
+}
+
+function getServiceAvailability(service = {}, fallbackIndex = 0) {
+    const fallback = localityInsights[fallbackIndex % localityInsights.length];
+    const availability = service.availability || {};
+    return {
+        etaMins: availability.etaMins || fallback.eta,
+        activeExperts: availability.activeExperts ?? fallback.experts,
+        jobsToday: availability.jobsToday ?? fallback.jobsToday,
+        topLocality: preferredLocality || availability.topLocality || fallback.name
+    };
+}
+
+function getExpertForService(service, fallbackIndex = 0) {
+    const experts = getFeaturedExpertsData();
+    const category = String(service?.category || '').toLowerCase();
+    const matchedExpert = experts.find(expert => {
+        const expertCategory = getExpertCategory(expert);
+        const expertText = `${expert.role || ''} ${(expert.services || []).join(' ')}`.toLowerCase();
+        return category && (expertCategory === category || expertText.includes(category));
+    });
+    return matchedExpert || experts[fallbackIndex % experts.length] || featuredExperts[0];
+}
 
 function persistUserState() {
     if (user) {
@@ -247,15 +478,44 @@ function getResetTokenFromLocation() {
     return new URLSearchParams(query).get('token') || '';
 }
 
-async function ensureServicesLoaded() {
-    if (allServices.length) return true;
+async function ensureServicesLoaded(options = {}) {
+    const resolvedOptions = typeof options === 'boolean' ? { force: options } : options;
+    const { force = false, silent = false } = resolvedOptions;
+    if (allServices.length && !force) return true;
     try {
-        const response = await fetch(`${API_URL}/api/services`);
+        const query = preferredLocality ? `?locality=${encodeURIComponent(preferredLocality)}` : '';
+        const response = await fetch(`${API_URL}/api/services${query}`);
         const data = await response.json();
         allServices = data.data.services || [];
         return allServices.length > 0;
     } catch (err) {
-        showToast('Could not load the service catalog right now.', 'error');
+        if (!silent) {
+            showToast('Could not load the service catalog right now.', 'error');
+        }
+        return false;
+    }
+}
+
+async function ensurePublicProvidersLoaded(options = {}) {
+    const resolvedOptions = typeof options === 'boolean' ? { force: options } : options;
+    const { force = false, silent = false } = resolvedOptions;
+    if (publicProviderCatalogLoaded && !force) return true;
+    try {
+        const query = preferredLocality ? `?locality=${encodeURIComponent(preferredLocality)}` : '';
+        const response = await fetch(`${API_URL}/api/auth/providers/public${query}`);
+        const data = await response.json();
+        if (data.status === 'success') {
+            publicProviderCatalog = data.data.providers || [];
+            publicProviderCatalogLoaded = true;
+            return true;
+        }
+        throw new Error(data.message || 'Could not load providers');
+    } catch (err) {
+        publicProviderCatalog = [];
+        publicProviderCatalogLoaded = false;
+        if (!silent) {
+            showToast('Could not load provider availability right now.', 'warning');
+        }
         return false;
     }
 }
@@ -317,6 +577,16 @@ async function installApp() {
 // ===== #14 LOADING SCREEN =====
 window.addEventListener('load', async () => {
     await loadConfig();
+    Promise.allSettled([
+        ensureServicesLoaded({ silent: true }),
+        ensurePublicProvidersLoaded({ silent: true })
+    ]).then(results => {
+        const loadedSomething = results.some(result => result.status === 'fulfilled' && result.value);
+        const currentRoute = activeRoute || getRouteFromLocation();
+        if (loadedSomething && ['home', 'services', 'leaderboard'].includes(getViewKey(currentRoute))) {
+            showView(currentRoute, { force: true, skipHashUpdate: true });
+        }
+    });
     setTimeout(() => {
         document.getElementById('loading-screen').classList.add('hidden');
     }, 1600);
@@ -527,7 +797,7 @@ const loc = {
         navHome: 'घरे', navServices: 'सेवा सब', navExpert: 'बड़का मिस्त्री', navCorp: 'बड़ काम'
     }
 };
-let currentLang = 'hi'; // Hindi-first experience
+let currentLang = 'en';
 
 function setLang(lang) {
     currentLang = lang;
@@ -554,6 +824,10 @@ function syncNavigationState(activeView) {
     const items = document.querySelectorAll('.bottom-nav-item');
     const viewToIndex = {
         home: 0,
+        about: 0,
+        careers: 0,
+        terms: 0,
+        privacy: 0,
         services: 1,
         leaderboard: 1,
         corporate: 1,
@@ -571,7 +845,8 @@ function syncNavigationState(activeView) {
 
     const accountBtn = items[2];
     if (accountBtn) {
-        accountBtn.innerHTML = `<span class="icon">👤</span>${user ? 'Account' : 'Login'}`;
+        const svgIcon = '<svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>';
+        accountBtn.innerHTML = `<span class="icon">${svgIcon}</span>${user ? 'Account' : 'Login'}`;
         accountBtn.setAttribute('onclick', user ? "showView('dashboard')" : "showView('login')");
     }
 }
@@ -638,6 +913,10 @@ function showView(route, options = {}) {
         window.scrollTo(0, 0);
         switch(viewKey) {
             case 'home': renderHome(); break;
+            case 'about': renderInfoPage('about'); break;
+            case 'careers': renderInfoPage('careers'); break;
+            case 'terms': renderInfoPage('terms'); break;
+            case 'privacy': renderInfoPage('privacy'); break;
             case 'login': renderLogin(); break;
             case 'reset-password': renderResetPassword(); break;
             case 'register': renderRegister(); break;
@@ -660,463 +939,388 @@ function showView(route, options = {}) {
 // ===== HOME VIEW =====
 function renderHome() {
     const l = loc[currentLang];
+    const experts = getFeaturedExpertsData();
     const homeServices = (allServices.length ? allServices.slice(0, 6).map((service, index) => {
-        const area = localityInsights[index % localityInsights.length];
+        const availability = getServiceAvailability(service, index);
         return {
             id: service._id,
             name: service.name,
             category: service.category,
             price: formatCurrency(service.price),
             desc: service.description || 'Verified doorstep service with transparent pricing.',
-            eta: `${area.eta} mins`,
-            demand: `${area.jobsToday} bookings today`,
-            area: area.name
+            eta: `${availability.etaMins} mins`,
+            demand: `${availability.jobsToday} bookings today`,
+            area: availability.topLocality,
+            experts: availability.activeExperts,
+            image: getServicePrimaryImage(service),
+            included: getServiceIncluded(service).slice(0, 2)
         };
     }) : [
-        { id: '', name: 'Deep Home Cleaning', category: 'Cleaning', price: '₹3,499', desc: 'Full apartment reset with kitchen and bathroom detailing.', eta: '22 mins', demand: '32 bookings today', area: 'Kankarbagh' },
-        { id: '', name: 'Leak & Plumbing Rescue', category: 'Plumber', price: '₹599', desc: 'Fast leak fixes, fittings, and tank line inspection.', eta: '19 mins', demand: '18 bookings today', area: 'Boring Road' },
-        { id: '', name: 'Electric Safety Visit', category: 'Electrician', price: '₹499', desc: 'Switchboard, fan, and appliance checks by verified experts.', eta: '16 mins', demand: '21 bookings today', area: 'Rajendra Nagar' },
-        { id: '', name: 'AC Cooling Tune-Up', category: 'Appliance', price: '₹799', desc: 'Cooling, gas, and filter tune-up with quick diagnosis.', eta: '24 mins', demand: '14 bookings today', area: 'Bailey Road' },
-        { id: '', name: 'Wall Repair & Paint', category: 'Painter', price: '₹4,999', desc: 'Patchwork plus room paint with a clean finish promise.', eta: '28 mins', demand: '11 bookings today', area: 'Danapur' },
-        { id: '', name: 'Pest Control Reset', category: 'Pest Control', price: '₹1,199', desc: 'Apartment-safe treatment for cockroaches, ants, and more.', eta: '26 mins', demand: '9 bookings today', area: 'Patliputra Colony' }
+        { id: '', name: 'Deep Home Cleaning', category: 'Cleaning', price: '₹3,499', desc: 'Full apartment reset with kitchen and bathroom detailing.', eta: '22 mins', demand: '32 bookings today', area: 'Kankarbagh', experts: 12, image: '/expert-cleaner.svg', included: ['Checklist-led execution', 'Premium cleaning kit'] },
+        { id: '', name: 'Leak & Plumbing Rescue', category: 'Plumber', price: '₹599', desc: 'Fast leak fixes, fittings, and tank line inspection.', eta: '19 mins', demand: '18 bookings today', area: 'Boring Road', experts: 9, image: '/expert-plumber.svg', included: ['Leak diagnosis', 'Transparent material note'] },
+        { id: '', name: 'Electric Safety Visit', category: 'Electrician', price: '₹499', desc: 'Switchboard, fan, and appliance checks by verified experts.', eta: '16 mins', demand: '21 bookings today', area: 'Rajendra Nagar', experts: 11, image: '/expert-electrician.svg', included: ['Safety inspection', 'Repair recommendation'] },
+        { id: '', name: 'AC Cooling Tune-Up', category: 'Appliance', price: '₹799', desc: 'Cooling, gas, and filter tune-up with quick diagnosis.', eta: '24 mins', demand: '14 bookings today', area: 'Bailey Road', experts: 7, image: '/expert-appliance.svg', included: ['Cooling test', 'Part estimate'] },
+        { id: '', name: 'Wall Repair & Paint', category: 'Painter', price: '₹4,999', desc: 'Patchwork plus room paint with a clean finish promise.', eta: '28 mins', demand: '11 bookings today', area: 'Danapur', experts: 6, image: '/hero.png', included: ['Surface prep', 'Clean finish checklist'] },
+        { id: '', name: 'Pest Control Reset', category: 'Pest Control', price: '₹1,199', desc: 'Apartment-safe treatment for cockroaches, ants, and more.', eta: '26 mins', demand: '9 bookings today', area: 'Patliputra Colony', experts: 8, image: '/hero.png', included: ['Apartment-safe treatment', 'Follow-up guidance'] }
     ]);
+    const categories = [
+        { icon: '⚡', label: 'Electrician', color: 'purple' },
+        { icon: '🔧', label: 'Plumber', color: 'blue' },
+        { icon: '🧹', label: 'Cleaning', color: 'green' },
+        { icon: '❄️', label: 'AC Repair', color: 'teal' },
+        { icon: '🪑', label: 'Carpenter', color: 'orange' },
+        { icon: '🎨', label: 'Painter', color: 'pink' },
+        { icon: '🐜', label: 'Pest Control', color: 'green' },
+        { icon: '🔩', label: 'Appliance', color: 'purple' }
+    ];
+    const testimonials = [
+        { q: 'Booked for my parents in Kankarbagh. The saved home flow made repeat booking much easier.', n: 'Shivani S.', c: 'Kankarbagh', r: '⭐⭐⭐⭐⭐' },
+        { q: 'The ETA and price were visible before I booked. That trust factor matters a lot.', n: 'Arvind P.', c: 'Boring Road', r: '⭐⭐⭐⭐⭐' },
+        { q: 'Photo upload helped the electrician come prepared. Much smoother experience.', n: 'Nidhi R.', c: 'Rajendra Nagar', r: '⭐⭐⭐⭐⭐' },
+        { q: 'Expert profile showed language, badges, and job history. Felt safer than random vendors.', n: 'Ritika K.', c: 'Patliputra Colony', r: '⭐⭐⭐⭐⭐' },
+        { q: 'Emergency priority got my leak issue sorted fast. Huge relief.', n: 'Aman M.', c: 'Danapur', r: '⭐⭐⭐⭐⭐' },
+        { q: 'Referral rewards and wallet balance actually made me return for AC service.', n: 'Faizan H.', c: 'Bailey Road', r: '⭐⭐⭐⭐' }
+    ];
 
     appContainer.innerHTML = `
-        <div class="page-transition" style="position:relative;overflow:hidden;">
-            <div class="orb orb-1" style="top:-100px;left:-100px;"></div>
-            <div class="orb orb-2" style="bottom:-100px;right:-100px;"></div>
-
-            ${deferredPrompt ? `
-            <div class="install-banner" id="install-banner" style="display:flex;background:var(--primary);color:white;padding:1rem;border-radius:var(--radius-sm);margin:1rem;align-items:center;gap:1rem;box-shadow:var(--shadow-lg);">
-                <span style="font-size:1.5rem;">📱</span>
-                <div style="flex:1;">
-                    <strong style="display:block;">${currentLang === 'en' ? 'Get the Fixentra App' : (currentLang === 'hi' ? 'फिक्सेन्ट्रा ऐप प्राप्त करें' : 'फिक्सेन्ट्रा एप डाउनलोड करीं')}</strong>
-                    <p style="font-size:0.75rem;opacity:0.9;">${currentLang === 'en' ? 'Install for faster access and exclusive local offers!' : (currentLang === 'hi' ? 'तेजी से पहुंच और विशेष स्थानीय ऑफ़र के लिए इंस्टॉल करें!' : 'जल्दी बुकिंग अउरी खास ऑफर खातिर इंस्टॉल करीं!')}</p>
+        <div class="page-transition">
+            <section class="uc-hero" style="position:relative;overflow:hidden;">
+                <div class="parallax-dots">
+                    <div class="parallax-dot"></div>
+                    <div class="parallax-dot"></div>
+                    <div class="parallax-dot"></div>
+                    <div class="parallax-dot"></div>
                 </div>
-                <button onclick="installApp(); this.parentElement.remove()" class="btn" style="background:white;color:var(--primary);padding:0.4rem 1rem;font-size:0.8rem;font-weight:700;">${currentLang === 'en' ? 'Install' : (currentLang === 'hi' ? 'इंस्टॉल करें' : 'डालीं')}</button>
-                <button onclick="this.parentElement.remove()" style="background:none;border:none;color:white;cursor:pointer;font-size:1.2rem;">×</button>
-            </div>
-            ` : ''}
-
-            ${(() => {
-                const month = new Date().getMonth();
-                const banners = {
-                    10: '<div style="background:linear-gradient(90deg, #f97316, #fb923c);color:white;text-align:center;padding:1rem;font-weight:700;font-size:0.9rem;">🙏 Chhath Puja Special: 20% off all Deep Cleaning services with code CHHATH20.</div>',
-                    9: '<div style="background:linear-gradient(90deg, #eab308, #f59e0b);color:white;text-align:center;padding:1rem;font-weight:700;font-size:0.9rem;">🪔 Diwali Ready: Book painters and electricians today!</div>',
-                    2: '<div style="background:linear-gradient(90deg, #ec4899, #8b5cf6);color:white;text-align:center;padding:1rem;font-weight:700;font-size:0.9rem;">🎨 Holi Offer: Get your home cleaned up post-celebration! Code: HOLI15</div>'
-                };
-                return banners[month] || '';
-            })()}
-
-            <section class="container hero hero-v2">
-                <div class="hero-content">
-                    <span class="hero-tag">🏆 Patna's most conversion-focused home service experience</span>
-                    <div class="chip-row" style="margin-bottom:1.25rem;">
-                        <span class="chip">📍 Hyperlocal ETAs</span>
-                        <span class="chip">🛡️ Verified experts</span>
-                        <span class="chip">💬 WhatsApp support</span>
-                    </div>
-                    <h1>${l.heroTitle}</h1>
-                    <p>${l.heroDesc}</p>
-
-                    <div id="live-activity-ticker" style="margin:1.5rem 0;display:flex;align-items:center;gap:0.75rem;font-size:0.85rem;color:var(--text-muted);background:rgba(255,255,255,0.08);padding:0.7rem 1rem;border-radius:var(--radius-sm);width:fit-content;backdrop-filter:blur(5px);border:1px solid rgba(0,0,0,0.03);animation:fadeSlideIn 0.8s ease-out;">
-                        <span style="font-size:1.1rem;">⏱️</span>
-                        <span id="ticker-text" style="font-weight:600;">Just booked: Sofa Cleaning in Kankarbagh</span>
-                    </div>
-
-                    <div class="cta-row">
-                        <button class="btn btn-primary btn-lg" onclick="showView('services')">${l.bookBtn}</button>
-                        <button class="btn btn-outline" onclick="showView('register')">${l.joinBtn}</button>
-                        <button class="btn btn-ghost" onclick="triggerSOS()">Emergency Priority</button>
-                    </div>
-
-                    <div class="search-container" style="position:relative;">
-                        <span class="search-icon">🔍</span>
-                        <input class="search-input" id="hero-search" type="text" placeholder="${l.searchPlaceholder}" oninput="handleSearch(this.value)" style="padding-right:3rem;">
-                        <button class="voice-btn" id="voice-btn" onclick="toggleVoiceSearch()" title="Search with voice" style="position:absolute;right:1rem;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1.3rem;">🎤</button>
-                        <div class="search-results" id="search-results"></div>
-                    </div>
-
-                    <div class="metrics-row">
-                        <div><h3 style="font-size:1.5rem;color:var(--primary);"><span class="counter" data-target="500" data-suffix="+">0</span></h3><p style="font-size:0.8rem;color:var(--text-muted);">${l.happyUsers}</p></div>
-                        <div><h3 style="font-size:1.5rem;color:var(--primary);"><span class="counter" data-target="50" data-suffix="+">0</span></h3><p style="font-size:0.8rem;color:var(--text-muted);">${l.verifiedExperts}</p></div>
-                        <div><h3 style="font-size:1.5rem;color:var(--accent);">4.8★</h3><p style="font-size:0.8rem;color:var(--text-muted);">${l.avgRating}</p></div>
-                    </div>
-                </div>
-
-                <div class="hero-side">
-                    <div class="hero-panel">
-                        <div class="summary-shell" style="margin-bottom:1.25rem;">
-                            <div>
-                                <p class="summary-label">Live Local Snapshot</p>
-                                <h3 style="margin-bottom:0.35rem;">Boring Road is fastest right now</h3>
-                                <p style="color:var(--text-muted);font-size:0.92rem;">16-22 minute ETAs for electrician, plumbing, and deep cleaning requests.</p>
-                            </div>
-                            <div class="summary-price">18 mins</div>
+                <div class="container uc-hero-content" style="position:relative;z-index:1;">
+                    <div>
+                        <div style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(78,205,196,0.15);border:1px solid rgba(78,205,196,0.3);padding:0.4rem 1rem;border-radius:var(--radius-full);font-size:0.8rem;font-weight:700;color:#4ECDC4;margin-bottom:1.5rem;">
+                            <span style="width:8px;height:8px;border-radius:50%;background:#4ECDC4;animation:pulse 2s infinite;"></span>
+                            Now serving Patna & suburbs
                         </div>
-
-                        <div class="mini-grid">
-                            <div class="mini-stat-card">
-                                <span class="mini-stat-title">Active Experts</span>
-                                <strong>14 nearby</strong>
-                                <span class="mini-stat-meta">Electrician, plumber, cleaner</span>
-                            </div>
-                            <div class="mini-stat-card">
-                                <span class="mini-stat-title">Neighborhood Trust</span>
-                                <strong>27 jobs today</strong>
-                                <span class="mini-stat-meta">4.9 avg local rating</span>
-                            </div>
+                        <h1>${l.heroTitle}</h1>
+                        <p>${l.heroDesc}</p>
+                        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+                            <button class="btn btn-primary btn-lg" onclick="showView('services')" style="background:white;color:#6C63FF;border-radius:var(--radius-full);padding:0.9rem 2rem;">${l.bookBtn}</button>
+                            <button class="btn" onclick="showView('register')" style="background:transparent;border:2px solid rgba(255,255,255,0.3);color:white;border-radius:var(--radius-full);padding:0.9rem 2rem;">${l.joinBtn}</button>
                         </div>
-
-                        <div class="locality-pill-row">
-                            ${localityInsights.map(item => `
-                                <button class="locality-pill" onclick="selectLocalityAndBrowse('${item.name}')">
-                                    <span>${item.name}</span>
-                                    <strong>${item.eta}m</strong>
-                                </button>
-                            `).join('')}
+                        <div class="uc-hero-stats">
+                            <div class="uc-hero-stat"><h3><span class="counter" data-target="500" data-suffix="+">0</span></h3><p>${l.happyUsers}</p></div>
+                            <div class="uc-hero-stat"><h3><span class="counter" data-target="50" data-suffix="+">0</span></h3><p>${l.verifiedExperts}</p></div>
+                            <div class="uc-hero-stat"><h3>4.8★</h3><p>${l.avgRating}</p></div>
                         </div>
                     </div>
-
-                    <div class="hero-proof-list">
-                        <div class="hero-proof-card">
-                            <span>🎯</span>
-                            <div>
-                                <strong>Saved homes + family booking</strong>
-                                <p>Book for parents, tenants, or office spaces in two taps.</p>
+                    <div class="uc-hero-right">
+                        <div class="uc-hero-card">
+                            <h4>🔍 Search Services</h4>
+                            <div style="position:relative;margin-top:0.75rem;">
+                                <input class="search-input" id="hero-search" type="text" placeholder="${l.searchPlaceholder}" oninput="handleSearch(this.value)" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:white;border-radius:var(--radius-full);padding:0.85rem 1.2rem 0.85rem 2.8rem;">
+                                <span style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);">🔍</span>
+                                <div class="search-results" id="search-results"></div>
                             </div>
                         </div>
-                        <div class="hero-proof-card">
-                            <span>📸</span>
-                            <div>
-                                <strong>Photo issue uploads</strong>
-                                <p>Upload a leak or appliance issue before booking for faster matching.</p>
+                        <div class="uc-hero-card">
+                            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+                                <span style="font-size:1.2rem;">⏱️</span>
+                                <span id="ticker-text" style="font-weight:600;font-size:0.9rem;">Just booked: Sofa Cleaning in Kankarbagh</span>
                             </div>
+                            <p>Real-time bookings happening across Patna</p>
                         </div>
-                        <div class="hero-proof-card">
-                            <span>🎁</span>
-                            <div>
-                                <strong>Referral and loyalty loop</strong>
-                                <p>Wallet rewards, streaks, and subscription perks improve retention.</p>
+                        <div class="uc-hero-card">
+                            <h4>📍 Quick Locality Check</h4>
+                            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.5rem;">
+                                ${localityInsights.slice(0, 4).map(item => `<button class="locality-pill" onclick="selectLocalityAndBrowse('${item.name}')" style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);color:white;font-size:0.78rem;padding:0.4rem 0.8rem;"><span>${item.name}</span> <strong style="color:#4ECDC4;">${item.eta}m</strong></button>`).join('')}
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section class="section-muted">
+            <section class="trust-strip reveal">
                 <div class="container">
-                    <div class="section-head">
-                        <span class="section-kicker">NEIGHBORHOOD PROOF</span>
-                        <h2>Availability that feels local, not generic</h2>
-                        <p>${l.trendingDesc}</p>
+                    <div class="trust-items">
+                        <div class="trust-item"><div class="trust-icon">✅</div>Background Verified</div>
+                        <div class="trust-item"><div class="trust-icon">🛡️</div>30-Day Guarantee</div>
+                        <div class="trust-item"><div class="trust-icon">💰</div>Transparent Pricing</div>
+                        <div class="trust-item"><div class="trust-icon">⚡</div>Same Day Service</div>
+                        <div class="trust-item"><div class="trust-icon">💬</div>WhatsApp Support</div>
                     </div>
-                    <div class="availability-grid">
-                        ${localityInsights.map(item => `
-                            <div class="availability-card">
-                                <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;">
-                                    <div>
-                                        <div class="card-category">${item.name}</div>
-                                        <h3 class="card-title" style="margin-bottom:0.4rem;">${item.coverage}</h3>
-                                    </div>
-                                    <span class="availability-tag">${item.eta} min ETA</span>
-                                </div>
-                                <p style="color:var(--text-muted);font-size:0.92rem;margin-bottom:1.25rem;">${item.jobsToday} bookings today, ${item.experts} active experts, and local users are saving ${item.savings} on average.</p>
-                                <div class="mini-grid compact-grid">
-                                    <div class="mini-stat-card">
-                                        <span class="mini-stat-title">Local rating</span>
-                                        <strong>${item.rating}</strong>
-                                        <span class="mini-stat-meta">Verified customer average</span>
-                                    </div>
-                                    <div class="mini-stat-card">
-                                        <span class="mini-stat-title">Active experts</span>
-                                        <strong>${item.experts}</strong>
-                                        <span class="mini-stat-meta">Ready for same-day jobs</span>
-                                    </div>
-                                </div>
-                                <button class="btn btn-outline" style="margin-top:1.25rem;" onclick="selectLocalityAndBrowse('${item.name}')">Book in ${item.name}</button>
+                    <div style="text-align:center;margin-top:0.75rem;">
+                        <span class="live-counter"><span class="live-dot"></span> <span id="live-booking-count">47</span> services booked in Patna today</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="uc-categories reveal">
+                <div class="container">
+                    <div class="uc-section-head">
+                        <span class="section-kicker">SERVICES</span>
+                        <h2>What are you looking for?</h2>
+                        <p>Select a category to explore our verified service professionals</p>
+                    </div>
+                    <div class="category-grid stagger-children">
+                        ${categories.map(cat => `
+                            <div class="category-item" onclick="showView('services')">
+                                <div class="category-icon ${cat.color}">${cat.icon}</div>
+                                <span>${cat.label}</span>
                             </div>
                         `).join('')}
                     </div>
                 </div>
             </section>
 
-            <section class="container section-shell">
-                <div class="section-head left">
-                    <span class="section-kicker">WHY USERS STICK</span>
-                    <h2>Major features that make Fixentra feel worth returning to</h2>
-                    <p>These are the retention and trust hooks this product needed: faster triage, stronger proof, and repeat-use utilities built into the UX.</p>
-                </div>
-                <div class="feature-grid">
-                    ${attractionFeatures.map(item => `
-                        <div class="feature-card">
-                            <div class="feature-icon">${item.icon}</div>
-                            <h3>${item.title}</h3>
-                            <p>${item.desc}</p>
-                        </div>
-                    `).join('')}
-                </div>
-            </section>
-
-            <section class="container section-shell">
-                <div class="section-head left">
-                    <span class="section-kicker">HIGH-INTENT SERVICES</span>
-                    <h2>${l.trendingTitle}</h2>
-                    <p>Every service card now carries locality context, starting price, and live demand so users can decide faster.</p>
-                </div>
-                <div class="grid service-grid-upgraded">
-                    ${homeServices.map(service => `
-                        <div class="card service-card-upgraded">
-                            <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;">
-                                <div>
-                                    <div class="card-category">${service.category}</div>
-                                    <h3 class="card-title">${service.name}</h3>
-                                </div>
-                                <span class="availability-tag">${service.eta}</span>
-                            </div>
-                            <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:1.25rem;">${service.desc}</p>
-                            <div class="service-meta-list">
-                                <span>📍 ${service.area}</span>
-                                <span>🔥 ${service.demand}</span>
-                                <span>🛡️ 30-day guarantee</span>
-                            </div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1.25rem;gap:1rem;flex-wrap:wrap;">
-                                <p class="card-price">${service.price}</p>
-                                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-                                    <button class="btn btn-outline" onclick="showView('services')">View More</button>
-                                    <button class="btn btn-primary" onclick="${service.id ? `openBookingModal('${service.id}','${service.name.replace(/'/g, "\\'")}')` : `showView('services')`}">Book Now</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </section>
-
-            <section class="section-muted">
+            <section class="how-it-works reveal" style="background:var(--bg-section);">
                 <div class="container">
-                    <div class="section-head">
-                        <span class="section-kicker">VERIFIED EXPERT PROFILES</span>
-                        <h2>Users trust people more than platforms</h2>
-                        <p>These cards now surface ETA, specialization, languages, badges, and profile depth before booking.</p>
+                    <div class="uc-section-head">
+                        <span class="section-kicker">HOW IT WORKS</span>
+                        <h2>Book a service in 3 simple steps</h2>
                     </div>
-                    <div class="experts-grid">
-                        ${featuredExperts.map(expert => `
-                            <div class="card expert-card">
-                                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:1rem;">
-                                    <div style="display:flex;align-items:center;gap:1rem;">
-                                        <div class="expert-avatar">${expert.emoji}</div>
+                    <div class="steps-row stagger-children">
+                        <div class="step-item"><div class="step-number">1</div><h4>Choose Service</h4><p>Select what you need from our wide range of categories</p></div>
+                        <div class="step-item"><div class="step-number">2</div><h4>Book & Schedule</h4><p>Pick your preferred date, time slot and locality</p></div>
+                        <div class="step-item"><div class="step-number">3</div><h4>Get It Done</h4><p>Verified expert arrives on time. Pay after satisfaction</p></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="uc-section reveal">
+                <div class="container">
+                    <div class="uc-section-head">
+                        <span class="section-kicker">TRENDING NOW</span>
+                        <h2>${l.trendingTitle}</h2>
+                        <p>Most booked services this week with transparent pricing</p>
+                    </div>
+                    <div class="uc-service-grid stagger-children">
+                        ${homeServices.map(service => {
+                            const numPrice = parseInt(service.price.replace(/[^0-9]/g,''));
+                            const marketPrice = Math.round(numPrice * 1.45);
+                            const savePercent = Math.round((1 - numPrice/marketPrice) * 100);
+                            return `
+                            <div class="uc-service-card" onclick="${service.id ? `openBookingModal('${service.id}','${service.name.replace(/'/g, "\\'")}')` : `showView('services')`}">
+                                <img class="card-img" src="${normalizeImageSrc(service.image)}" alt="${service.name}" loading="lazy">
+                                <div class="card-body">
+                                    <div style="display:inline-block;font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--primary);background:var(--primary-light);padding:0.2rem 0.6rem;border-radius:var(--radius-full);margin-bottom:0.5rem;">${service.category}</div>
+                                    <h3>${service.name}</h3>
+                                    <div class="card-meta"><span>⏱ ${service.eta}</span><span>📍 ${service.area}</span><span>🔥 ${service.demand}</span></div>
+                                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">${service.desc}</p>
+                                    <div class="card-footer">
                                         <div>
-                                            <h4 style="margin-bottom:0.1rem;">${expert.name}</h4>
-                                            <p style="font-size:0.8rem;color:var(--primary);font-weight:700;">${expert.role}</p>
+                                            <span class="price-from">Starting from</span>
+                                            <span class="card-price">${service.price}</span>
+                                            <span class="price-was">₹${marketPrice.toLocaleString()}</span>
+                                            <span class="price-save">${savePercent}% OFF</span>
                                         </div>
+                                        <button class="btn btn-primary" style="padding:0.5rem 1.2rem;font-size:0.82rem;border-radius:var(--radius-full);">Book Now</button>
                                     </div>
-                                    <span class="availability-tag">${expert.eta}</span>
                                 </div>
-                                <div class="service-meta-list" style="margin-bottom:1rem;">
-                                    <span>⭐ ${expert.rating}</span>
-                                    <span>${expert.jobs} jobs</span>
-                                    <span>📍 ${expert.area}</span>
-                                </div>
-                                <p style="font-size:0.9rem;color:var(--text-muted);margin-bottom:1rem;">${expert.bio}</p>
-                                <div class="chip-row" style="margin-bottom:1.25rem;">
-                                    ${expert.badges.map(badge => `<span class="chip muted-chip">${badge}</span>`).join('')}
-                                </div>
-                                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
-                                    <button class="btn btn-outline" onclick="openExpertProfile('${expert.id}')">View Profile</button>
-                                    <button class="btn btn-primary" onclick="bookFeaturedExpert('${expert.id}')">Book ${expert.role}</button>
+                            </div>
+                        `}).join('')}
+                    </div>
+                    <div style="text-align:center;margin-top:2rem;">
+                        <button class="btn btn-outline" onclick="showView('services')" style="border-radius:var(--radius-full);padding:0.75rem 2rem;">View All Services →</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="uc-section alt reveal">
+                <div class="container">
+                    <div class="uc-section-head">
+                        <span class="section-kicker">COVERAGE</span>
+                        <h2>Available in your neighborhood</h2>
+                        <p>Real-time availability across Patna localities</p>
+                    </div>
+                    <div class="uc-service-grid stagger-children">
+                        ${localityInsights.slice(0, 6).map(item => `
+                            <div class="uc-service-card" onclick="selectLocalityAndBrowse('${item.name}')" style="cursor:pointer;">
+                                <div class="card-body">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                                        <h3 style="margin-bottom:0;">📍 ${item.name}</h3>
+                                        <span style="background:var(--secondary-light);color:var(--secondary);font-size:0.75rem;font-weight:700;padding:0.3rem 0.6rem;border-radius:var(--radius-full);">${item.eta} min</span>
+                                    </div>
+                                    <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1rem;">${item.coverage}</p>
+                                    <div style="display:flex;gap:1.5rem;font-size:0.82rem;color:var(--text-muted);">
+                                        <span><strong style="color:var(--text);">${item.experts}</strong> experts</span>
+                                        <span><strong style="color:var(--text);">${item.jobsToday}</strong> jobs today</span>
+                                        <span>⭐ ${item.rating}</span>
+                                    </div>
                                 </div>
                             </div>
                         `).join('')}
                     </div>
-                </div>
-            </section>
 
-            <section class="container section-shell">
-                <div class="section-head left">
-                    <span class="section-kicker">PLANS THAT BUILD RETENTION</span>
-                    <h2>Subscriptions and recurring care packages</h2>
-                    <p>A service marketplace grows faster when repeat users have a reason to stay. These plans turn one-off jobs into monthly habit loops.</p>
-                </div>
-                <div class="plan-grid">
-                    ${subscriptionPlans.map(plan => `
-                        <div class="plan-card">
-                            <div style="display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;margin-bottom:1rem;">
-                                <div>
-                                    <div class="card-category" style="color:${plan.accent};">${plan.name}</div>
-                                    <h3 class="card-title" style="margin-bottom:0.35rem;">${plan.price}</h3>
-                                </div>
-                                <span class="chip muted-chip">${plan.subtitle}</span>
-                            </div>
-                            <div class="plan-perks">
-                                ${plan.perks.map(perk => `<span>✓ ${perk}</span>`).join('')}
-                            </div>
-                            <button class="btn btn-primary" style="margin-top:1.5rem;width:100%;" onclick="${plan.name === 'Society Pro' ? `openPlanModal('Society Pro')` : `openPlanModal('${plan.name}')`}">Explore ${plan.name}</button>
+                    <div class="referral-banner" onclick="openReferralModal()">
+                        <div class="ref-icon">🎁</div>
+                        <div class="ref-text">
+                            <h4>Invite friends & earn ₹100 each!</h4>
+                            <p>Share your referral code. Both you and your friend get ₹100 wallet credits.</p>
                         </div>
-                    `).join('')}
+                        <span style="margin-left:auto;font-size:1.2rem;color:#92400e;">→</span>
+                    </div>
                 </div>
             </section>
 
-            <section class="section-muted">
+            <section class="uc-section reveal">
                 <div class="container">
-                    <div class="section-head">
-                        <span class="section-kicker">PRICE TRANSPARENCY</span>
-                        <h2>Why Fixentra? Compare & Save 💰</h2>
-                        <p>Price trust is conversion fuel. This section now scrolls safely on mobile and stays readable on smaller screens.</p>
+                    <div class="uc-section-head">
+                        <span class="section-kicker">TOP RATED</span>
+                        <h2>Meet our verified professionals</h2>
+                        <p>Background-checked experts with proven track records</p>
                     </div>
-                    <div class="compare-table-wrapper">
-                        <table class="compare-table">
+                    <div class="uc-expert-grid stagger-children">
+                        ${experts.slice(0, 4).map(expert => {
+                            const badgeMap = {
+                                'Police Verified': '<span class="verification-badge badge-verified"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Verified</span>',
+                                'Top 1%': '<span class="verification-badge badge-top">🏆 Top 1%</span>',
+                                'Women Safety': '<span class="verification-badge badge-women">♀ Women Safety</span>',
+                                'Fast ETA': '<span class="verification-badge badge-fast">⚡ Fast ETA</span>'
+                            };
+                            return `
+                            <div class="uc-expert-card">
+                                <div class="uc-expert-avatar"><img src="${normalizeImageSrc(expert.image)}" alt="${expert.name}" loading="lazy"></div>
+                                <h4>${expert.name}</h4>
+                                <p class="role">${expert.role}</p>
+                                <div class="expert-stats">
+                                    <div><strong>⭐ ${expert.rating}</strong>Rating</div>
+                                    <div><strong>${expert.jobs}</strong>Jobs</div>
+                                    <div><strong>${expert.eta}</strong>ETA</div>
+                                </div>
+                                <div style="display:flex;flex-wrap:wrap;gap:0.4rem;justify-content:center;margin-bottom:1rem;">
+                                    ${expert.badges.map(b => badgeMap[b] || `<span class="verification-badge badge-elite">${b}</span>`).join('')}
+                                </div>
+                                <div style="display:flex;gap:0.5rem;justify-content:center;">
+                                    <button class="btn btn-outline" style="padding:0.4rem 1rem;font-size:0.8rem;border-radius:var(--radius-full);" onclick="openExpertProfile('${expert.id}')">Profile</button>
+                                    <button class="btn btn-primary" style="padding:0.4rem 1rem;font-size:0.8rem;border-radius:var(--radius-full);" onclick="bookFeaturedExpert('${expert.id}')">Book</button>
+                                </div>
+                            </div>
+                        `}).join('')}
+                    </div>
+                </div>
+            </section>
+
+            <section class="uc-pricing reveal">
+                <div class="container">
+                    <div class="uc-section-head">
+                        <span class="section-kicker">COMPARE & SAVE</span>
+                        <h2>Why choose Fixentra?</h2>
+                        <p>Transparent pricing that saves you money</p>
+                    </div>
+                    <div style="overflow-x:auto;border-radius:var(--radius);">
+                        <table>
                             <thead><tr><th>Service</th><th>Local Market</th><th>Fixentra Price</th><th>You Save</th></tr></thead>
                             <tbody>
-                                <tr><td>Home Deep Cleaning</td><td>₹5,000 - ₹7,000</td><td class="highlight">₹3,499</td><td style="color:var(--secondary);font-weight:700;">Up to 50%</td></tr>
-                                <tr><td>Electrician Visit</td><td>₹800 - ₹1,200</td><td class="highlight">₹499</td><td style="color:var(--secondary);font-weight:700;">Up to 58%</td></tr>
-                                <tr><td>Plumber Repair</td><td>₹800 - ₹1,500</td><td class="highlight">₹599</td><td style="color:var(--secondary);font-weight:700;">Up to 60%</td></tr>
-                                <tr><td>Carpenter Work</td><td>₹1,200 - ₹2,000</td><td class="highlight">₹899</td><td style="color:var(--secondary);font-weight:700;">Up to 55%</td></tr>
-                                <tr><td>Wall Painting (Per Room)</td><td>₹7,000 - ₹10,000</td><td class="highlight">₹4,999</td><td style="color:var(--secondary);font-weight:700;">Up to 50%</td></tr>
-                                <tr><td>Pest Control</td><td>₹1,500 - ₹2,500</td><td class="highlight">₹1,199</td><td style="color:var(--secondary);font-weight:700;">Up to 52%</td></tr>
+                                <tr><td>Home Deep Cleaning</td><td>₹5,000 - ₹7,000</td><td class="highlight">₹3,499</td><td class="savings">Up to 50%</td></tr>
+                                <tr><td>Electrician Visit</td><td>₹800 - ₹1,200</td><td class="highlight">₹499</td><td class="savings">Up to 58%</td></tr>
+                                <tr><td>Plumber Repair</td><td>₹800 - ₹1,500</td><td class="highlight">₹599</td><td class="savings">Up to 60%</td></tr>
+                                <tr><td>Carpenter Work</td><td>₹1,200 - ₹2,000</td><td class="highlight">₹899</td><td class="savings">Up to 55%</td></tr>
+                                <tr><td>Wall Painting</td><td>₹7,000 - ₹10,000</td><td class="highlight">₹4,999</td><td class="savings">Up to 50%</td></tr>
+                                <tr><td>Pest Control</td><td>₹1,500 - ₹2,500</td><td class="highlight">₹1,199</td><td class="savings">Up to 52%</td></tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
             </section>
 
-            <section style="background:#0f172a;color:white;padding:6rem 0;">
+            <section class="uc-testimonials reveal">
                 <div class="container">
-                    <div class="section-head" style="margin-bottom:3rem;">
-                        <span class="section-kicker" style="color:#93c5fd;">CUSTOMER VOICE</span>
-                        <h2 style="color:white;">What keeps convincing users to try us</h2>
-                        <p style="color:rgba(255,255,255,0.7);">Short, locality-backed testimonials work better than generic praise. The carousel remains, but the cards are cleaner and more scannable.</p>
+                    <div class="uc-section-head">
+                        <span class="section-kicker" style="background:rgba(255,255,255,0.1);color:#4ECDC4;">REVIEWS</span>
+                        <h2 style="color:white;">Trusted by <span class="counter" data-target="500" data-suffix="+">0</span> Patna households</h2>
+                        <p style="color:rgba(255,255,255,0.6);">Real reviews from real customers</p>
                     </div>
-                    <div class="carousel-container">
-                        <div class="carousel-track" id="carousel-track">
-                            ${[
-                                [
-                                    { q: 'Booked for my parents in Kankarbagh. The saved home flow made repeat booking much easier.', n: 'Shivani S.', c: 'Kankarbagh', r: '⭐⭐⭐⭐⭐' },
-                                    { q: 'The ETA and price were visible before I booked. That trust factor matters a lot.', n: 'Arvind P.', c: 'Boring Road', r: '⭐⭐⭐⭐⭐' },
-                                    { q: 'Photo upload helped the electrician come prepared. Much smoother experience.', n: 'Nidhi R.', c: 'Rajendra Nagar', r: '⭐⭐⭐⭐⭐' }
-                                ],
-                                [
-                                    { q: 'The expert profile showed language, badges, and job history. Felt safer than calling random local vendors.', n: 'Ritika K.', c: 'Patliputra Colony', r: '⭐⭐⭐⭐⭐' },
-                                    { q: 'Emergency priority got my leak issue sorted fast. Huge relief.', n: 'Aman M.', c: 'Danapur', r: '⭐⭐⭐⭐⭐' },
-                                    { q: 'Referral rewards and wallet balance actually made me return for AC service.', n: 'Faizan H.', c: 'Bailey Road', r: '⭐⭐⭐⭐' }
-                                ]
-                            ].map(slide => `
-                                <div class="carousel-slide">
-                                    <div class="grid" style="grid-template-columns:repeat(3,1fr);">
-                                        ${slide.map(t => `
-                                            <div style="background:rgba(255,255,255,0.05);padding:2rem;border-radius:var(--radius);border:1px solid rgba(255,255,255,0.08);">
-                                                <p style="margin-bottom:0.5rem;">${t.r}</p>
-                                                <p style="font-style:italic;margin-bottom:1.25rem;opacity:0.85;">"${t.q}"</p>
-                                                <p style="font-weight:700;">${t.n}</p>
-                                                <p style="font-size:0.75rem;opacity:0.65;">${t.c}</p>
-                                                <div class="verified-badge" style="margin-top:0.75rem;color:#10b981;">Verified Customer</div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
+                    <div class="testimonial-carousel">
+                        <div class="testimonial-track" id="testimonial-track">
+                            ${testimonials.map(t => `
+                                <div class="uc-testimonial-card">
+                                    <div class="stars">${t.r}</div>
+                                    <p class="quote">"${t.q}"</p>
+                                    <p class="author">${t.n}</p>
+                                    <p class="location">📍 ${t.c}</p>
                                 </div>
                             `).join('')}
                         </div>
-                        <button class="carousel-nav carousel-prev" onclick="moveCarousel(-1)">←</button>
-                        <button class="carousel-nav carousel-next" onclick="moveCarousel(1)">→</button>
-                        <div class="carousel-dots">
-                            <button class="carousel-dot active" onclick="goToSlide(0)"></button>
-                            <button class="carousel-dot" onclick="goToSlide(1)"></button>
+                    </div>
+                    <div class="carousel-controls">
+                        <button class="carousel-arrow" onclick="moveTestimonials(-1)">←</button>
+                        <div class="carousel-dots" id="testimonial-dots">
+                            ${testimonials.map((_, i) => `<button class="t-dot${i===0?' active':''}" onclick="goToTestimonial(${i})"></button>`).join('')}
+                        </div>
+                        <button class="carousel-arrow" onclick="moveTestimonials(1)">→</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="uc-section reveal">
+                <div class="container">
+                    <div class="uc-section-head">
+                        <span class="section-kicker">FAQ</span>
+                        <h2>Frequently asked questions</h2>
+                    </div>
+                    <div style="max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:0.75rem;" class="stagger-children">
+                        ${[
+                            {q:'Are the experts background verified?',a:'Yes. Every provider undergoes a rigorous 3-step ID check, skill assessment, and personal interview.'},
+                            {q:'Can I book for parents or another property?',a:'Yes. The flow supports saved homes and family profiles for repeat bookings.'},
+                            {q:"What if I'm not happy with the service?",a:'We offer a 30-day Fixentra Guarantee. We will send another expert free of charge.'},
+                            {q:'How fast can someone arrive?',a:'ETAs are shown based on your selected locality. Most experts arrive within 20-30 minutes.'},
+                            {q:'How do I cancel or reschedule?',a:'You can cancel or reschedule any booking from your Dashboard up to 2 hours before the appointment at no cost.'}
+                        ].map(f => `
+                            <div style="background:var(--card-bg);border:1px solid var(--border-color);border-radius:var(--radius);padding:1.25rem;cursor:pointer;transition:all 0.3s ease;" onclick="const a=this.querySelector('.faq-answer');const i=this.querySelector('.faq-icon');if(a.style.maxHeight){a.style.maxHeight=null;i.textContent='+';}else{a.style.maxHeight=a.scrollHeight+'px';i.textContent='−';}" onmouseenter="this.style.borderColor='rgba(108,99,255,0.3)'" onmouseleave="this.style.borderColor='var(--border-color)'">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <h4 style="font-size:0.95rem;">${f.q}</h4><span class="faq-icon" style="color:var(--primary);font-size:1.2rem;font-weight:700;transition:transform 0.3s;">+</span>
+                                </div>
+                                <p class="faq-answer" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease;color:var(--text-muted);font-size:0.9rem;margin-top:0.75rem;line-height:1.7;">${f.a}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </section>
+
+            <section class="uc-section reveal-scale" style="padding-bottom:0;">
+                <div class="container">
+                    <div class="uc-cta-banner">
+                        <h2>Ready to get started?</h2>
+                        <p>Join 500+ Patna households who trust Fixentra for their home services</p>
+                        <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+                            <button class="btn btn-lg" onclick="showView('services')" style="background:white;color:var(--primary);border-radius:var(--radius-full);">Explore Services</button>
+                            <button class="btn btn-lg" onclick="showView('corporate')" style="background:transparent;border:2px solid white;color:white;border-radius:var(--radius-full);">Corporate Booking</button>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section class="container section-shell">
-                <div class="section-head">
-                    <span class="section-kicker">LAST-MILE TRUST</span>
-                    <h2>Got Questions? 🤔</h2>
-                    <p>Simple answers, kept short for mobile screens.</p>
-                </div>
-                <div style="max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:1rem;">
-                    ${[
-                        {q:'Are the experts background verified?',a:'Yes. Every provider undergoes a rigorous 3-step ID check, skill assessment, and personal interview.'},
-                        {q:'Can I book for parents or another property?',a:'Yes. The new flow supports saved homes and family profiles for repeat bookings.'},
-                        {q:'What if I\'m not happy with the service?',a:'We offer a 30-day Fixentra Guarantee. We will send another expert free of charge.'},
-                        {q:'How fast can someone arrive?',a:'The locality cards and booking summary now show ETA based on your selected area.'}
-                    ].map(f => `
-                        <div class="card" style="cursor:pointer;padding:1.5rem 2rem;" onclick="this.querySelector('.faq-answer').style.display = this.querySelector('.faq-answer').style.display === 'block' ? 'none' : 'block'">
-                            <div style="display:flex;justify-content:space-between;align-items:center;">
-                                <h4>${f.q}</h4><span style="color:var(--primary);font-size:1.3rem;">+</span>
-                            </div>
-                            <p class="faq-answer" style="display:none;color:var(--text-muted);font-size:0.95rem;margin-top:1rem;line-height:1.7;">${f.a}</p>
+            <footer class="uc-footer">
+                <div class="container">
+                    <div class="uc-footer-grid">
+                        <div>
+                            <div class="logo" style="font-size:1.8rem;display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;"><img src="logo.svg" alt="Fixentra" style="width:36px;height:36px;object-fit:contain;filter:brightness(10);">FIXENTRA.</div>
+                            <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;line-height:1.7;max-width:280px;margin-bottom:1rem;">Patna's trusted platform for verified home services. Expert care with a 30-day satisfaction guarantee.</p>
+                            <span style="font-size:0.8rem;color:#4ECDC4;font-weight:700;">📍 Serving Patna & Suburbs</span>
                         </div>
-                    `).join('')}
-                </div>
-            </section>
-
-            <section class="container section-shell">
-                <div class="cta-banner">
-                    <div>
-                        <p class="summary-label">READY TO CONVERT MORE USERS</p>
-                        <h2 style="margin-bottom:0.5rem;">Screen-friendly, trust-heavy, and repeat-booking ready</h2>
-                        <p style="color:var(--text-muted);max-width:640px;">The home flow now sells speed, safety, people, and repeat convenience instead of making users scroll through a generic long landing page.</p>
-                    </div>
-                    <div class="cta-row">
-                        <button class="btn btn-primary btn-lg" onclick="showView('services')">Explore Services</button>
-                        <button class="btn btn-outline" onclick="showView('corporate')">Society / Corporate Flow</button>
-                    </div>
-                </div>
-            </section>
-
-            <footer style="background:var(--card-bg);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border-top:1px solid rgba(255,255,255,0.1);padding:6rem 0 3rem;position:relative;overflow:hidden;margin-top:auto;box-shadow:0 -10px 40px rgba(0,0,0,0.02);">
-                <div class="orb shadow" style="width:600px;height:600px;background:var(--primary);top:-300px;left:-200px;opacity:0.1;filter:blur(80px);"></div>
-                <div class="orb shadow" style="width:500px;height:500px;background:var(--secondary);bottom:-150px;right:-150px;opacity:0.08;filter:blur(80px);"></div>
-
-                <div class="container" style="position:relative;z-index:2;">
-                    <!-- Top Section -->
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:3rem;margin-bottom:4rem;">
-
-                        <!-- Brand Column -->
-                        <div style="display:flex;flex-direction:column;gap:1.5rem;">
-                            <div class="logo" style="font-size:2.2rem;display:flex;align-items:center;gap:0.75rem;"><img src="logo.svg" alt="Fixentra" style="width:45px;height:45px;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.1));">FIXENTRA.</div>
-                            <p style="color:var(--text-muted);font-size:0.95rem;line-height:1.7;max-width:300px;">India's fastest-growing premium home services platform. Delivering expert care with a 30-day satisfaction guarantee.</p>
-                            <span style="font-size:0.85rem;font-weight:700;color:var(--primary);background:var(--primary-light);padding:0.4rem 1rem;border-radius:100px;width:fit-content;display:flex;align-items:center;gap:0.5rem;">📍 Serving Patna &amp; Suburbs</span>
+                        <div>
+                            <h4>Company</h4>
+                            <a href="/about.html">About Us</a>
+                            <a href="/careers.html">Careers</a>
+                            <a href="/terms.html">Terms & Conditions</a>
+                            <a href="/privacy.html">Privacy Policy</a>
                         </div>
-
-                        <!-- Links Column 1 -->
-                        <div style="display:flex;flex-direction:column;gap:1rem;">
-                            <h4 style="font-size:1.1rem;color:var(--text);margin-bottom:1rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">Company</h4>
-                            <a onclick="openInfoModal('about')" style="cursor:pointer;color:var(--text-muted);transition:all 0.3s cubic-bezier(0.16,1,0.3,1);font-weight:500;display:flex;align-items:center;gap:0.5rem;" onmouseover="this.style.color='var(--primary)';this.style.transform='translateX(8px)'" onmouseout="this.style.color='var(--text-muted)';this.style.transform='translateX(0)'"><span style="font-size:0.8rem;opacity:0.5;">▸</span> About Us</a>
-                            <a onclick="openInfoModal('careers')" style="cursor:pointer;color:var(--text-muted);transition:all 0.3s cubic-bezier(0.16,1,0.3,1);font-weight:500;display:flex;align-items:center;gap:0.5rem;" onmouseover="this.style.color='var(--primary)';this.style.transform='translateX(8px)'" onmouseout="this.style.color='var(--text-muted)';this.style.transform='translateX(0)'"><span style="font-size:0.8rem;opacity:0.5;">▸</span> Careers <span style="font-size:0.6rem;background:var(--secondary);color:white;padding:2px 6px;border-radius:100px;">HIRING</span></a>
-                            <a onclick="openInfoModal('terms')" style="cursor:pointer;color:var(--text-muted);transition:all 0.3s cubic-bezier(0.16,1,0.3,1);font-weight:500;display:flex;align-items:center;gap:0.5rem;" onmouseover="this.style.color='var(--primary)';this.style.transform='translateX(8px)'" onmouseout="this.style.color='var(--text-muted)';this.style.transform='translateX(0)'"><span style="font-size:0.8rem;opacity:0.5;">▸</span> Terms & Conditions</a>
-                            <a onclick="openInfoModal('privacy')" style="cursor:pointer;color:var(--text-muted);transition:all 0.3s cubic-bezier(0.16,1,0.3,1);font-weight:500;display:flex;align-items:center;gap:0.5rem;" onmouseover="this.style.color='var(--primary)';this.style.transform='translateX(8px)'" onmouseout="this.style.color='var(--text-muted)';this.style.transform='translateX(0)'"><span style="font-size:0.8rem;opacity:0.5;">▸</span> Privacy Policy</a>
+                        <div>
+                            <h4>Services</h4>
+                            <a onclick="showView('services')" style="cursor:pointer;">Deep Cleaning</a>
+                            <a onclick="showView('services')" style="cursor:pointer;">Electrical & Plumbing</a>
+                            <a onclick="showView('services')" style="cursor:pointer;">AC Maintenance</a>
+                            <a onclick="showView('corporate')" style="cursor:pointer;">Corporate Bookings</a>
                         </div>
-
-                        <!-- Links Column 2 -->
-                        <div style="display:flex;flex-direction:column;gap:1rem;">
-                            <h4 style="font-size:1.1rem;color:var(--text);margin-bottom:1rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">Services</h4>
-                            <a onclick="showView('services')" style="cursor:pointer;color:var(--text-muted);transition:all 0.3s cubic-bezier(0.16,1,0.3,1);font-weight:500;display:flex;align-items:center;gap:0.5rem;" onmouseover="this.style.color='var(--primary)';this.style.transform='translateX(8px)'" onmouseout="this.style.color='var(--text-muted)';this.style.transform='translateX(0)'"><span style="font-size:0.8rem;opacity:0.5;">▸</span> Deep Cleaning</a>
-                            <a onclick="showView('services')" style="cursor:pointer;color:var(--text-muted);transition:all 0.3s cubic-bezier(0.16,1,0.3,1);font-weight:500;display:flex;align-items:center;gap:0.5rem;" onmouseover="this.style.color='var(--primary)';this.style.transform='translateX(8px)'" onmouseout="this.style.color='var(--text-muted)';this.style.transform='translateX(0)'"><span style="font-size:0.8rem;opacity:0.5;">▸</span> Electrical & Plumbing</a>
-                            <a onclick="showView('services')" style="cursor:pointer;color:var(--text-muted);transition:all 0.3s cubic-bezier(0.16,1,0.3,1);font-weight:500;display:flex;align-items:center;gap:0.5rem;" onmouseover="this.style.color='var(--primary)';this.style.transform='translateX(8px)'" onmouseout="this.style.color='var(--text-muted)';this.style.transform='translateX(0)'"><span style="font-size:0.8rem;opacity:0.5;">▸</span> AC Maintenance</a>
-                            <a onclick="showView('corporate')" style="cursor:pointer;color:var(--text-muted);transition:all 0.3s cubic-bezier(0.16,1,0.3,1);font-weight:500;display:flex;align-items:center;gap:0.5rem;" onmouseover="this.style.color='var(--primary)';this.style.transform='translateX(8px)'" onmouseout="this.style.color='var(--text-muted)';this.style.transform='translateX(0)'"><span style="font-size:0.8rem;opacity:0.5;">▸</span> Corporate Bookings</a>
-                        </div>
-
-                        <!-- Newsletter Column -->
-                        <div style="display:flex;flex-direction:column;gap:1rem;">
-                            <h4 style="font-size:1.1rem;color:var(--text);margin-bottom:1rem;font-weight:800;letter-spacing:0.5px;text-transform:uppercase;">Get Exclusive Deals</h4>
-                            <p style="color:var(--text-muted);font-size:0.9rem;">Subscribe for 15% off your first premium booking.</p>
-                            <div style="display:flex;background:var(--bg);border-radius:100px;padding:0.3rem;box-shadow:inset 0 2px 10px rgba(0,0,0,0.05);margin-top:0.5rem;border:1px solid rgba(150,150,150,0.1);">
-                                <input type="email" placeholder="Enter email address" style="border:none;background:transparent;padding:0.6rem 1rem;flex:1;outline:none;color:var(--text);font-size:0.9rem;">
-                                <button class="btn btn-primary btn-glow" style="padding:0.6rem 1.5rem;border-radius:100px;font-weight:600;" onclick="subscribeNewsletter(this)">Join</button>
-                            </div>
-                            <div style="display:flex;gap:1rem;margin-top:1.5rem;">
-                                <a onclick="window.open('mailto:support@fixentra.in')" style="cursor:pointer;width:40px;height:40px;border-radius:50%;background:var(--bg);border:1px solid rgba(150,150,150,0.2);display:flex;align-items:center;justify-content:center;transition:all 0.3s;font-size:1.1rem;color:var(--text-muted);box-shadow:0 4px 10px rgba(0,0,0,0.05);" onmouseover="this.style.transform='translateY(-4px)';this.style.background='var(--primary)';this.style.color='white';this.style.borderColor='var(--primary)'" onmouseout="this.style.transform='translateY(0)';this.style.background='var(--bg)';this.style.color='var(--text-muted)';this.style.borderColor='rgba(150,150,150,0.2)'">✉️</a>
-                                <a onclick="window.open('https://wa.me/919876543210','_blank')" style="cursor:pointer;width:40px;height:40px;border-radius:50%;background:var(--bg);border:1px solid rgba(150,150,150,0.2);display:flex;align-items:center;justify-content:center;transition:all 0.3s;font-size:1.1rem;color:var(--text-muted);box-shadow:0 4px 10px rgba(0,0,0,0.05);" onmouseover="this.style.transform='translateY(-4px)';this.style.background='linear-gradient(45deg,#25D366,#128C7E)';this.style.color='white';this.style.borderColor='transparent'" onmouseout="this.style.transform='translateY(0)';this.style.background='var(--bg)';this.style.color='var(--text-muted)';this.style.borderColor='rgba(150,150,150,0.2)'">💬</a>
-                                <a onclick="showView('corporate')" style="cursor:pointer;width:40px;height:40px;border-radius:50%;background:var(--bg);border:1px solid rgba(150,150,150,0.2);display:flex;align-items:center;justify-content:center;transition:all 0.3s;font-size:1.1rem;color:var(--text-muted);box-shadow:0 4px 10px rgba(0,0,0,0.05);" onmouseover="this.style.transform='translateY(-4px)';this.style.background='#0077b5';this.style.color='white';this.style.borderColor='#0077b5'" onmouseout="this.style.transform='translateY(0)';this.style.background='var(--bg)';this.style.color='var(--text-muted)';this.style.borderColor='rgba(150,150,150,0.2)'">🏢</a>
-                            </div>
+                        <div>
+                            <h4>Get in Touch</h4>
+                            <a onclick="window.open('mailto:support@fixentra.in')" style="cursor:pointer;">✉️ support@fixentra.in</a>
+                            <a onclick="window.open('https://wa.me/919876543210','_blank')" style="cursor:pointer;">💬 WhatsApp Support</a>
+                            <a onclick="showView('corporate')" style="cursor:pointer;">🏢 Corporate Enquiry</a>
                         </div>
                     </div>
-
-                    <!-- Bottom Divider -->
-                    <div style="border-top:1px solid rgba(150,150,150,0.15);padding-top:2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1.5rem;">
-                        <p style="color:var(--text-muted);font-size:0.9rem;font-weight:500;">&copy; ${new Date().getFullYear()} Fixentra Technologies Pvt Ltd. Designed with <span style="color:#ef4444;">♥</span> in Patna.</p>
-                        <div style="display:flex;gap:1rem;align-items:center;">
-                            <span style="font-size:0.8rem;font-weight:700;color:var(--text);background:rgba(150,150,150,0.1);padding:0.5rem 1rem;border-radius:100px;display:flex;align-items:center;gap:0.4rem;"><span style="color:var(--secondary);">🔒</span> 256-Bit Secure</span>
-                            <span style="font-size:0.8rem;font-weight:700;color:var(--text);background:rgba(150,150,150,0.1);padding:0.5rem 1rem;border-radius:100px;display:flex;align-items:center;gap:0.4rem;">⭐ 4.9 App Store</span>
+                    <div class="uc-footer-bottom">
+                        <p>© ${new Date().getFullYear()} Fixentra Technologies Pvt Ltd. Made with ❤️ in Patna.</p>
+                        <div class="uc-footer-badges">
+                            <span class="uc-footer-badge">🔒 256-Bit Secure</span>
+                            <span class="uc-footer-badge">⭐ 4.9 Rated</span>
+                            <span class="uc-footer-badge">✅ Verified Experts</span>
                         </div>
                     </div>
                 </div>
@@ -1124,8 +1328,15 @@ function renderHome() {
         </div>
     `;
     currentCarouselSlide = 0;
-    setTimeout(animateCounters, 300);
+    setTimeout(() => {
+        animateCounters();
+        initScrollReveal();
+        initSocialProof();
+        initLiveCounter();
+        initTestimonialAutoplay();
+    }, 300);
 }
+
 
 // ===== #27 CAROUSEL =====
 function moveCarousel(dir) {
@@ -1205,6 +1416,7 @@ function toggleVoiceSearch() {
 
 function selectLocalityAndBrowse(locality) {
     preferredLocality = locality;
+    publicProviderCatalogLoaded = false;
     showToast(`Showing availability for ${locality}`, 'info');
     if (getViewKey(activeRoute || getRouteFromLocation()) === 'services') {
         renderServices();
@@ -1224,7 +1436,8 @@ function getExpertCategory(expert) {
 }
 
 async function bookFeaturedExpert(expertId) {
-    const expert = featuredExperts.find(item => item.id === expertId);
+    await ensurePublicProvidersLoaded({ silent: true });
+    const expert = getFeaturedExpertsData().find(item => item.id === expertId);
     const loaded = await ensureServicesLoaded();
     if (!loaded) return;
     const category = getExpertCategory(expert);
@@ -1235,6 +1448,10 @@ async function bookFeaturedExpert(expertId) {
     }
     preferredLocality = expert?.area || preferredLocality;
     await openBookingModal(matchedService._id, matchedService.name);
+    const matchedProvider = publicProviderCatalog.find(item => String(item._id) === String(expert?.id));
+    if (matchedProvider) {
+        document.getElementById('modal-provider-id').value = matchedProvider._id;
+    }
     document.getElementById('booking-issue').value = expert ? `Prefer ${expert.name} (${expert.role}) if available for this job.` : '';
     if (expert?.area) {
         document.getElementById('booking-locality').value = expert.area;
@@ -1246,12 +1463,13 @@ async function bookFeaturedExpert(expertId) {
 }
 
 function openExpertProfile(expertId) {
-    const expert = featuredExperts.find(item => item.id === expertId) || featuredExperts[0];
+    const experts = getFeaturedExpertsData();
+    const expert = experts.find(item => item.id === expertId) || experts[0] || featuredExperts[0];
     const content = document.getElementById('expert-detail-content');
     content.innerHTML = `
         <div class="summary-shell" style="margin-bottom:1.5rem;">
             <div style="display:flex;align-items:center;gap:1rem;">
-                <div class="expert-avatar" style="width:72px;height:72px;font-size:2rem;">${expert.emoji}</div>
+                <div class="expert-avatar" style="width:72px;height:72px;font-size:2rem;">${expert.image ? `<img src="${normalizeImageSrc(expert.image)}" alt="${expert.name}">` : expert.emoji}</div>
                 <div>
                     <p class="summary-label">${expert.role}</p>
                     <h2 style="margin-bottom:0.25rem;">${expert.name}</h2>
@@ -1401,25 +1619,64 @@ function removeFamilyProfile(id) {
     refreshHomesManager();
 }
 
-function openInfoModal(type) {
+function renderInfoPage(type) {
     const page = infoPages[type];
-    if (!page) return;
-    const existing = document.getElementById('info-modal');
-    if (existing) existing.remove();
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.id = 'info-modal';
-    modal.style.display = 'flex';
-    modal.innerHTML = `
-        <div class="modal-content" style="max-width:560px;">
-            <span class="close-modal" onclick="this.closest('.modal').remove()">&times;</span>
-            <p class="summary-label">${type.toUpperCase()}</p>
-            <h2 style="margin-bottom:1rem;">${page.title}</h2>
-            <p style="color:var(--text-muted);line-height:1.8;">${page.body}</p>
-            <button class="btn btn-primary" style="margin-top:1.5rem;width:100%;" onclick="this.closest('.modal').remove()">Close</button>
+    if (!page) {
+        renderHome();
+        return;
+    }
+    appContainer.innerHTML = `
+        <div class="page-transition container info-page-shell" style="position:relative;padding-bottom:6rem;margin-top:2rem;">
+            <div class="breadcrumb"><a onclick="showView('home')">Home</a> <span>›</span> <span>${page.title}</span></div>
+            <section class="info-hero">
+                <div>
+                    <span class="section-kicker">${page.kicker}</span>
+                    <h1 style="margin:0.85rem 0 1rem;">${page.title}</h1>
+                    <p class="info-lead">${page.intro}</p>
+                    <div class="cta-row" style="margin-top:2rem;">
+                        <button class="btn btn-primary" onclick="showView('${page.ctaView}')">${page.ctaLabel}</button>
+                        <button class="btn btn-outline" onclick="showView('home')">Back Home</button>
+                    </div>
+                </div>
+                <div class="info-side-card">
+                    <div class="summary-shell" style="margin-bottom:1rem;">
+                        <div>
+                            <p class="summary-label">FIXENTRA</p>
+                            <h3 style="margin-bottom:0.25rem;">Built for reliable home-service delivery</h3>
+                            <p style="color:var(--text-muted);font-size:0.92rem;">Openable, readable pages with real product context instead of dead footer links.</p>
+                        </div>
+                        <img src="logo.svg" alt="Fixentra" style="width:64px;height:64px;object-fit:contain;">
+                    </div>
+                    <div class="info-mini-list">
+                        ${page.highlights.map(item => `<div class="info-bullet">${item}</div>`).join('')}
+                    </div>
+                </div>
+            </section>
+
+            <section class="info-stat-grid">
+                ${page.stats.map(item => `
+                    <div class="mini-stat-card">
+                        <span class="mini-stat-title">${item.label}</span>
+                        <strong>${item.value}</strong>
+                        <span class="mini-stat-meta">${page.title}</span>
+                    </div>
+                `).join('')}
+            </section>
+
+            <section class="info-section-grid">
+                ${page.sections.map(section => `
+                    <article class="info-section-card">
+                        <h3>${section.title}</h3>
+                        <p>${section.body}</p>
+                    </article>
+                `).join('')}
+            </section>
         </div>
     `;
-    document.body.appendChild(modal);
+}
+
+function openInfoModal(type) {
+    showView(type);
 }
 
 function subscribeNewsletter(trigger) {
@@ -1509,6 +1766,9 @@ async function openSettingsModal() {
     if (!user || !token) return showView('login');
     const existing = document.getElementById('settings-modal');
     if (existing) existing.remove();
+    const profileImage = normalizeImageSrc(user.profileImage);
+    const hasProfileImage = Boolean(profileImage && !String(user.profileImage || '').includes('default.png'));
+    const isProvider = user.role === 'provider';
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.id = 'settings-modal';
@@ -1519,10 +1779,32 @@ async function openSettingsModal() {
             <p class="summary-label">ACCOUNT SETTINGS</p>
             <h2 style="margin-bottom:1rem;">Update Profile</h2>
             <form onsubmit="saveSettings(event)">
-                <div class="form-group"><label>Name</label><input type="text" id="settings-name" value="${user.name || ''}" required></div>
-                <div class="form-group"><label>Phone</label><input type="text" id="settings-phone" value="${user.phone || ''}" required></div>
+                <div class="settings-media-preview">
+                    <div class="sidebar-avatar">${hasProfileImage ? `<img src="${profileImage}" alt="${user.name}">` : user.name.charAt(0).toUpperCase()}</div>
+                    <div>
+                        <h3 style="margin-bottom:0.25rem;">${user.name}</h3>
+                        <p style="color:var(--text-muted);font-size:0.9rem;">${isProvider ? 'Provider profile with public availability details' : 'Customer profile used for bookings and invoices'}</p>
+                    </div>
+                </div>
+                <div class="form-group"><label>Profile Image</label><input type="file" id="settings-profile-image" accept="image/*"></div>
+                <div class="form-split">
+                    <div class="form-group"><label>Name</label><input type="text" id="settings-name" value="${user.name || ''}" required></div>
+                    <div class="form-group"><label>Phone</label><input type="text" id="settings-phone" value="${user.phone || ''}" required></div>
+                </div>
                 <div class="form-group"><label>Address</label><input type="text" id="settings-address" value="${user.address || ''}" required></div>
-                <button class="btn btn-primary btn-lg" style="width:100%;">Save Changes</button>
+                ${isProvider ? `
+                    <div class="summary-list" style="margin-bottom:1rem;">
+                        <div class="summary-row"><span>Public profile</span><strong>Visible in expert discovery</strong></div>
+                        <div class="summary-row"><span>Assignment engine</span><strong>Uses skills, locality, response time</strong></div>
+                    </div>
+                    <div class="form-group"><label>Skills</label><input type="text" id="settings-skills" value="${(user.skills || []).join(', ')}" placeholder="electrician, appliance repair"></div>
+                    <div class="form-group"><label>Working Localities</label><input type="text" id="settings-localities" value="${(user.workingLocalities || []).join(', ')}" placeholder="Boring Road, Kankarbagh"></div>
+                    <div class="form-split">
+                        <div class="form-group"><label>Response Time (mins)</label><input type="number" id="settings-response-time" min="5" max="180" value="${user.responseTimeMins || 18}"></div>
+                        <div class="form-group"><label>Experience (years)</label><input type="number" id="settings-experience" min="0" max="50" value="${user.experience || 0}"></div>
+                    </div>
+                ` : ''}
+                <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">Save Changes</button>
             </form>
         </div>
     `;
@@ -1531,23 +1813,42 @@ async function openSettingsModal() {
 
 async function saveSettings(event) {
     event.preventDefault();
+    const btn = event.submitter || event.target.querySelector('button[type="submit"]');
+    const originalText = btn?.innerHTML;
     try {
+        const formData = new FormData();
+        formData.append('name', document.getElementById('settings-name').value.trim());
+        formData.append('phone', document.getElementById('settings-phone').value.trim());
+        formData.append('address', document.getElementById('settings-address').value.trim());
+
+        const profileImage = document.getElementById('settings-profile-image')?.files?.[0];
+        if (profileImage) {
+            formData.append('profileImage', profileImage);
+        }
+
+        if (user.role === 'provider') {
+            formData.append('skills', document.getElementById('settings-skills').value.trim());
+            formData.append('workingLocalities', document.getElementById('settings-localities').value.trim());
+            formData.append('responseTimeMins', document.getElementById('settings-response-time').value.trim());
+            formData.append('experience', document.getElementById('settings-experience').value.trim());
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'Saving...';
+        }
         const response = await fetch(`${API_URL}/api/auth/update-me`, {
             method: 'PATCH',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({
-                name: document.getElementById('settings-name').value.trim(),
-                phone: document.getElementById('settings-phone').value.trim(),
-                address: document.getElementById('settings-address').value.trim()
-            })
+            body: formData
         });
         const data = await response.json();
         if (data.status === 'success') {
             user = data.data.user;
             ensureUserProfileDefaults();
+            await ensurePublicProvidersLoaded({ force: true, silent: true });
             document.getElementById('settings-modal')?.remove();
             showToast('Profile updated successfully.', 'success');
             renderDashboard();
@@ -1556,6 +1857,11 @@ async function saveSettings(event) {
         showToast(data.message || 'Failed to save settings.', 'error');
     } catch (err) {
         showToast('Failed to save settings.', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText || 'Save Changes';
+        }
     }
 }
 
@@ -1965,9 +2271,11 @@ async function renderServices() {
         </div>`;
 
     try {
-        const response = await fetch(`${API_URL}/api/services`);
-        const data = await response.json();
-        allServices = data.data.services;
+        await ensurePublicProvidersLoaded({ force: true, silent: true });
+        const loaded = await ensureServicesLoaded({ force: true });
+        if (!loaded) {
+            throw new Error('Service catalog unavailable');
+        }
         renderServiceCards(allServices);
     } catch (err) {
         console.error('Fetch error:', err);
@@ -1977,26 +2285,34 @@ async function renderServices() {
 
 function renderServiceCards(services) {
     const grid = document.getElementById('services-grid');
+    if (!grid) return;
     if (!services.length) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);">No services match this filter.</p>'; return; }
     const booked = [32, 18, 24, 15, 9, 21, 12];
-    grid.innerHTML = services.map((s, i) => `
-        ${(() => {
-            const locality = localityInsights[i % localityInsights.length];
-            const expert = featuredExperts[i % featuredExperts.length];
-            return `
-        <div class="card" style="animation:cardStagger 0.5s ease-out ${i * 0.1}s both;">
-            <div style="display:flex;justify-content:space-between;align-items:center;">
+    grid.innerHTML = services.map((s, i) => {
+        const availability = getServiceAvailability(s, i);
+        const expert = getExpertForService(s, i);
+        const included = getServiceIncluded(s).slice(0, 2);
+        return `
+        <div class="card service-browser-card" style="animation:cardStagger 0.5s ease-out ${i * 0.1}s both;">
+            <div class="service-card-media tall">
+                <img src="${getServicePrimaryImage(s)}" alt="${s.name}">
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;">
                 <div class="card-category">${s.category}</div>
-                <div class="verified-badge" style="background:linear-gradient(135deg,#f59e0b20,#ef444420);color:var(--accent);border:1px solid #f59e0b40;font-weight:700;"><span style="margin-right:4px;">🏆</span>Top Rated in ${locality.name}</div>
+                <div class="verified-badge" style="background:linear-gradient(135deg,#f59e0b20,#ef444420);color:var(--accent);border:1px solid #f59e0b40;font-weight:700;"><span style="margin-right:4px;">🏆</span>Top Rated in ${availability.topLocality}</div>
             </div>
             <h3 class="card-title" style="margin-top:0.75rem;">${s.name}</h3>
             <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1.25rem;">${s.description || 'Professional service.'}</p>
             <div class="service-meta-list" style="margin-bottom:1rem;">
-                <span>⏱️ ${locality.eta} min ETA</span>
-                <span>👷 ${expert.name}</span>
-                <span>📸 Photo diagnosis ready</span>
+                <span>⏱️ ${availability.etaMins} min ETA</span>
+                <span>👷 ${availability.activeExperts} experts</span>
+                <span>📍 ${availability.topLocality}</span>
+                <span>🧑 ${expert.name}</span>
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="chip-row" style="margin-bottom:1rem;">
+                ${included.map(item => `<span class="chip muted-chip">${item}</span>`).join('')}
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;">
                 <p class="card-price">₹${s.price.toLocaleString()}</p>
                 <button class="btn btn-primary" onclick="event.stopPropagation();openBookingModal('${s._id}','${s.name.replace(/'/g, "\\'")}')">Book Now</button>
             </div>
@@ -2006,9 +2322,8 @@ function renderServiceCards(services) {
                 <p style="font-size:0.75rem;color:var(--secondary);cursor:pointer;font-weight:600;" onclick="event.stopPropagation();openExpertProfile('${expert.id}')">View Expert →</p>
             </div>
         </div>
-        `;
-        })()}
-    `).join('');
+    `;
+    }).join('');
 }
 
 function filterServices(category, triggerButton) {
@@ -2022,18 +2337,43 @@ function filterServices(category, triggerButton) {
 function showServiceDetail(id) {
     const s = allServices.find(x => x._id === id);
     if (!s) return;
-    const expert = featuredExperts.find(item => item.role.toLowerCase().includes((s.category || '').toLowerCase())) || featuredExperts[0];
-    const locality = preferredLocality ? getLocalityInsight(preferredLocality) : localityInsights[0];
+    const expert = getExpertForService(s);
+    const availability = getServiceAvailability(s);
+    const gallery = getServiceGallery(s);
+    const included = getServiceIncluded(s);
     const content = document.getElementById('service-detail-content');
     content.innerHTML = `
-        <div style="text-align:center;margin-bottom:2rem;">
-            <div class="card-category" style="font-size:0.85rem;">${s.category}</div>
-            <h2 style="margin-top:0.5rem;background:var(--gradient-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">${s.name}</h2>
+        <div class="service-detail-shell">
+            <div class="service-card-media tall detail-media">
+                <img src="${gallery[0]}" alt="${s.name}">
+            </div>
+            <div style="text-align:center;margin:1.5rem 0 2rem;">
+                <div class="card-category" style="font-size:0.85rem;">${s.category}</div>
+                <h2 style="margin-top:0.5rem;background:var(--gradient-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">${s.name}</h2>
+            </div>
         </div>
-        <p style="color:var(--text-muted);line-height:1.8;margin-bottom:2rem;">${s.description}</p>
+        <p style="color:var(--text-muted);line-height:1.8;margin-bottom:1.5rem;">${s.description}</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:2rem;">
             <div style="background:var(--primary-light);padding:1rem;border-radius:var(--radius-sm);text-align:center;"><p style="font-size:0.8rem;color:var(--text-muted);">Price</p><p style="font-size:1.5rem;font-weight:800;color:var(--primary);">₹${s.price.toLocaleString()}</p></div>
-            <div style="background:var(--secondary-light);padding:1rem;border-radius:var(--radius-sm);text-align:center;"><p style="font-size:0.8rem;color:var(--text-muted);">Local ETA</p><p style="font-size:1.5rem;font-weight:800;color:var(--secondary);">${locality.eta} mins</p></div>
+            <div style="background:var(--secondary-light);padding:1rem;border-radius:var(--radius-sm);text-align:center;"><p style="font-size:0.8rem;color:var(--text-muted);">Local ETA</p><p style="font-size:1.5rem;font-weight:800;color:var(--secondary);">${availability.etaMins} mins</p></div>
+        </div>
+        <div class="service-gallery-strip">
+            ${gallery.map(image => `<img src="${image}" alt="${s.name} gallery image">`).join('')}
+        </div>
+        <div class="service-included-list">
+            ${included.map(item => `<div class="service-included-item">✓ ${item}</div>`).join('')}
+        </div>
+        <div class="mini-grid" style="margin-bottom:1.5rem;">
+            <div class="mini-stat-card">
+                <span class="mini-stat-title">Active experts</span>
+                <strong>${availability.activeExperts}</strong>
+                <span class="mini-stat-meta">${availability.topLocality} currently has the best routing match</span>
+            </div>
+            <div class="mini-stat-card">
+                <span class="mini-stat-title">Live demand</span>
+                <strong>${availability.jobsToday} jobs today</strong>
+                <span class="mini-stat-meta">Photo upload and locality selection improve matching speed</span>
+            </div>
         </div>
         <div class="mini-stat-card" style="margin-bottom:1.5rem;">
             <span class="mini-stat-title">Recommended Expert</span>
@@ -2076,7 +2416,7 @@ async function renderDashboard() {
                 <div class="dashboard-grid">
                     <div class="sidebar">
                         <div style="text-align:center;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid rgba(0,0,0,0.05);">
-                            <div class="sidebar-avatar">${user.name.charAt(0).toUpperCase()}</div>
+                            <div class="sidebar-avatar">${user.profileImage && !String(user.profileImage).includes('default.png') ? `<img src="${normalizeImageSrc(user.profileImage)}" alt="${user.name}">` : user.name.charAt(0).toUpperCase()}</div>
                             <h3 style="margin-bottom:0.25rem;">${user.name}</h3>
                             <p style="font-size:0.8rem;color:var(--primary);text-transform:capitalize;font-weight:600;">${user.role} Account</p>
                         </div>
@@ -2150,6 +2490,9 @@ async function renderDashboard() {
             const statusIdx = statusOrder.indexOf(b.status);
             const isProvider = user.role === 'provider';
             const savedHome = savedAddresses.find(item => b.address && b.address.includes(item.address));
+            const serviceImage = getServicePrimaryImage(b.serviceId || {});
+            const issueImage = normalizeImageSrc(b.issuePhotoUrl);
+            const providerImage = normalizeImageSrc(b.providerId?.profileImage);
             return `
             <div class="card" style="position:relative;overflow:hidden;">
                 ${(b.status === 'assigned' || b.status === 'accepted') ? `
@@ -2157,7 +2500,7 @@ async function renderDashboard() {
                     <div class="radar-ping"></div>
                     <div style="z-index:2;text-align:center;">
                         <p style="font-size:0.7rem;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:1px;">Expert On The Way 📍</p>
-                        <p style="font-size:0.6rem;color:var(--text-muted);">ETA: 12 mins</p>
+                        <p style="font-size:0.6rem;color:var(--text-muted);">ETA: ${b.estimatedArrivalMins || 12} mins</p>
                     </div>
                     <div style="position:absolute;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 20px,rgba(79,70,229,0.05) 20px,rgba(79,70,229,0.05) 21px),repeating-linear-gradient(90deg,transparent,transparent 20px,rgba(79,70,229,0.05) 20px,rgba(79,70,229,0.05) 21px);"></div>
                 </div>` : ''}
@@ -2166,12 +2509,18 @@ async function renderDashboard() {
                     <span style="font-size:0.75rem;background:${b.status==='completed'?'var(--secondary-light)':b.status==='rejected'?'#fee2e2':'var(--primary-light)'};color:${b.status==='completed'?'var(--secondary)':b.status==='rejected'?'var(--danger)':'var(--primary)'};padding:3px 10px;border-radius:var(--radius-full);font-weight:600;text-transform:capitalize;">${b.status}</span>
                 </div>
                 <h3 class="card-title">${b.serviceId?.name || 'Service'}</h3>
+                <div class="dashboard-media-row">
+                    <img class="dashboard-image-thumb" src="${serviceImage}" alt="${b.serviceId?.name || 'Service'}">
+                    ${issueImage ? `<img class="dashboard-image-thumb" src="${issueImage}" alt="Uploaded issue">` : ''}
+                    ${providerImage ? `<img class="dashboard-image-thumb" src="${providerImage}" alt="${b.providerId?.name || 'Assigned provider'}">` : ''}
+                </div>
                 <p style="font-size:0.85rem;color:var(--text-muted);">📅 ${new Date(b.date).toDateString()}</p>
                 <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:0.5rem;">🕒 ${b.timeSlot}</p>
                 <p style="font-size:0.85rem;">📍 ${b.address}</p>
                 ${savedHome ? `<p style="font-size:0.8rem;color:var(--primary);margin-top:0.4rem;">🏠 Saved property: ${savedHome.label}</p>` : ''}
                 ${b.familyProfile ? `<p style="font-size:0.8rem;color:var(--secondary);margin-top:0.4rem;">👤 Booking for: ${b.familyProfile}</p>` : ''}
                 ${b.issueNote ? `<p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.75rem;">📝 ${b.issueNote}</p>` : ''}
+                ${b.providerId?.name ? `<p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.55rem;">👷 Assigned: ${b.providerId.name}</p>` : ''}
 
                 <div class="timeline" style="margin-top:1.25rem;">
                     <div class="timeline-line"><div class="timeline-line-fill" style="width:${Math.max(0, statusIdx) / (statusOrder.length - 1) * 100}%;"></div></div>
@@ -2231,22 +2580,33 @@ async function handleAuth(event, type) {
     event.preventDefault();
     const isRegister = type === 'register';
     const payload = isRegister ? {
-        name: document.getElementById('reg-name').value,
-        email: document.getElementById('reg-email').value,
+        name: document.getElementById('reg-name').value.trim(),
+        email: document.getElementById('reg-email').value.trim().toLowerCase(),
         password: document.getElementById('reg-password').value,
         role: document.getElementById('reg-role').value,
-        address: document.getElementById('reg-address').value,
-        phone: document.getElementById('reg-phone').value,
-        referralCode: document.getElementById('reg-referral').value
+        address: document.getElementById('reg-address').value.trim(),
+        phone: document.getElementById('reg-phone').value.trim(),
+        referralCode: document.getElementById('reg-referral').value.trim()
     } : {
-        email: document.getElementById('login-email').value,
+        email: document.getElementById('login-email').value.trim().toLowerCase(),
         password: document.getElementById('login-password').value
     };
 
     if (isRegister) {
-        window.pendingRegPayload = payload;
-        document.getElementById('otp-modal').style.display = 'flex';
-        showToast('Security OTP sent to your phone! 📱', 'info');
+        const btn = event.submitter || event.target.querySelector('button[type="submit"]');
+        const originalText = btn?.innerHTML;
+        try {
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = 'Sending verification code...';
+            }
+            await requestRegisterOtp(payload);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText || 'Create Account ✨';
+            }
+        }
         return;
     }
 
@@ -2272,43 +2632,132 @@ async function handleAuth(event, type) {
     }
 }
 
-function moveOTP(input, nextId) {
-    if (input.value.length === 1 && nextId) {
-        document.getElementById(nextId).focus();
+function sanitizeOtpInput(input) {
+    if (input) {
+        input.value = input.value.replace(/\D/g, '').slice(0, 6);
     }
 }
 
-async function verifyOTP() {
-    const btn = document.querySelector('#otp-modal .btn');
-    btn.innerHTML = 'Verifying...';
-
-    // Simulate verification
-    setTimeout(async () => {
-        const payload = window.pendingRegPayload;
-        try {
-            const response = await fetch(`${API_URL}/api/auth/register`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            const data = await response.json();
-            if (data.status === 'success') {
-                localStorage.setItem('fixentra_token', data.token);
-                localStorage.setItem('fixentra_user', JSON.stringify(data.data.user));
-                user = data.data.user; token = data.token;
-                showToast(`Welcome to Fixentra, ${user.name}! ✨`, 'success');
-                triggerConfetti();
-                closeModal('otp-modal');
-                initUI();
-            } else {
-                showToast(data.message || 'Registration failed.', 'error');
-                btn.innerHTML = 'Verify & Register →';
-            }
-        } catch (err) {
-            showToast('Registration failed.', 'error');
-            btn.innerHTML = 'Verify & Register →';
+function openOtpModal({ recipient, otpPreview, deliveryMode }) {
+    const helpText = document.getElementById('otp-help-text');
+    const otpInput = document.getElementById('otp-code');
+    const previewBanner = document.getElementById('otp-preview-banner');
+    if (helpText) {
+        helpText.textContent = `Enter the 6-digit code sent to ${recipient} to complete registration.`;
+    }
+    if (otpInput) {
+        otpInput.value = '';
+    }
+    if (previewBanner) {
+        if (otpPreview) {
+            previewBanner.style.display = 'block';
+            previewBanner.innerHTML = `Demo delivery mode is active. Your current verification code is <strong>${otpPreview}</strong>.`;
+        } else {
+            previewBanner.style.display = 'block';
+            previewBanner.textContent = deliveryMode === 'email'
+                ? 'Verification email sent. Check inbox and spam if it does not arrive immediately.'
+                : 'Verification code sent successfully.';
         }
-    }, 1200);
+    }
+    document.getElementById('otp-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('otp-code')?.focus(), 120);
+}
+
+async function requestRegisterOtp(payload, isResend = false) {
+    try {
+        const response = await fetch(`${API_URL}/api/auth/request-register-otp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: payload.name,
+                email: payload.email,
+                password: payload.password
+            })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            window.pendingRegPayload = {
+                ...payload,
+                verificationToken: data.data.verificationToken
+            };
+            openOtpModal(data.data);
+            showToast(isResend ? 'A fresh verification code has been sent.' : `Verification code sent to ${data.data.recipient}.`, 'success');
+            return true;
+        }
+        const message = data.message || data.errors?.[0]?.msg || 'Could not send verification code.';
+        showToast(message, 'error');
+        return false;
+    } catch (err) {
+        showToast('Could not send verification code right now.', 'error');
+        return false;
+    }
+}
+
+async function resendRegisterOTP() {
+    if (!window.pendingRegPayload) {
+        showToast('Start registration again to request a new code.', 'warning');
+        closeModal('otp-modal');
+        showView('register');
+        return;
+    }
+    await requestRegisterOtp(window.pendingRegPayload, true);
+}
+
+async function verifyOTP() {
+    const btn = document.getElementById('otp-verify-btn');
+    const otpInput = document.getElementById('otp-code');
+    const verificationCode = otpInput?.value?.trim() || '';
+    const payload = window.pendingRegPayload;
+
+    if (!payload?.verificationToken) {
+        showToast('Verification session expired. Please request a new code.', 'warning');
+        closeModal('otp-modal');
+        showView('register');
+        return;
+    }
+    if (verificationCode.length !== 6) {
+        showToast('Enter the 6-digit verification code.', 'warning');
+        otpInput?.focus();
+        return;
+    }
+
+    const originalText = btn?.innerHTML;
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = 'Verifying...';
+        }
+        const response = await fetch(`${API_URL}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...payload,
+                verificationCode,
+                verificationToken: payload.verificationToken
+            })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            localStorage.setItem('fixentra_token', data.token);
+            localStorage.setItem('fixentra_user', JSON.stringify(data.data.user));
+            user = data.data.user;
+            token = data.token;
+            window.pendingRegPayload = null;
+            showToast(`Welcome to Fixentra, ${user.name}! ✨`, 'success');
+            triggerConfetti();
+            closeModal('otp-modal');
+            initUI();
+            return;
+        }
+        showToast(data.message || data.errors?.[0]?.msg || 'Registration failed.', 'error');
+    } catch (err) {
+        showToast('Registration failed.', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText || 'Verify & Register →';
+        }
+    }
 }
 
 function logout() {
@@ -2510,6 +2959,7 @@ async function openBookingModal(id, name, emergency = false) {
     activeBookingBasePrice = service?.price || 0;
 
     document.getElementById('modal-service-id').value = id;
+    document.getElementById('modal-provider-id').value = '';
     document.getElementById('modal-title').innerText = emergency ? `Priority Booking: ${name}` : `Book: ${name}`;
     document.getElementById('booking-date').min = new Date().toISOString().split('T')[0];
     document.getElementById('coupon-message').textContent = '';
@@ -2539,6 +2989,29 @@ function closeModal(id) {
 
 let currentCouponCode = null;
 let currentDiscount = 0;
+
+function buildBookingFormData(bookingPayload) {
+    const formData = new FormData();
+    Object.entries(bookingPayload).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            formData.append(key, value);
+        }
+    });
+    const issuePhoto = document.getElementById('booking-photo')?.files?.[0];
+    if (issuePhoto) {
+        formData.append('issuePhoto', issuePhoto);
+    }
+    return formData;
+}
+
+async function createBookingRequest(bookingPayload) {
+    const response = await fetch(`${API_URL}/api/bookings`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: buildBookingFormData(bookingPayload)
+    });
+    return response.json();
+}
 
 async function applyCoupon() {
     const code = document.getElementById('booking-coupon').value.trim().toUpperCase();
@@ -2611,12 +3084,14 @@ document.getElementById('booking-form').onsubmit = async (e) => {
     const familyProfile = familyProfiles.find(item => item.id === document.getElementById('booking-family-profile').value)?.label || 'For Me';
     const addressLabel = savedAddresses.find(item => item.id === document.getElementById('booking-home-select').value)?.label || 'Custom address';
     const issueNote = document.getElementById('booking-issue').value.trim();
+    const providerId = document.getElementById('modal-provider-id').value.trim();
     const baseAfterDiscount = Math.max(0, s.price - (s.price * (currentDiscount / 100)));
     const emergencySurcharge = bookingMode === 'emergency' ? baseAfterDiscount * 0.5 : 0;
     const estimatedTotal = Math.round(baseAfterDiscount + emergencySurcharge);
 
     const bookingPayload = {
         serviceId,
+        providerId,
         address: fullAddress,
         locality,
         date: document.getElementById('booking-date').value,
@@ -2637,12 +3112,7 @@ document.getElementById('booking-form').onsubmit = async (e) => {
         btn.disabled = true;
 
         try {
-            const bookingRes = await fetch(`${API_URL}/api/bookings`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(bookingPayload)
-            });
-            const bookingData = await bookingRes.json();
+            const bookingData = await createBookingRequest(bookingPayload);
 
             if (bookingData.status === 'success') {
                 closeModal('booking-modal');
@@ -2710,12 +3180,7 @@ document.getElementById('booking-form').onsubmit = async (e) => {
 
             try {
                 // Create booking
-                const bookingRes = await fetch(`${API_URL}/api/bookings`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify(bookingPayload)
-                });
-                const bookingData = await bookingRes.json();
+                const bookingData = await createBookingRequest(bookingPayload);
 
                 if (bookingData.status === 'success') {
                     // Verify simulated payment
@@ -2754,12 +3219,7 @@ document.getElementById('booking-form').onsubmit = async (e) => {
             order_id: orderData.data.id,
             handler: async function (response) {
                 try {
-                    const bookingRes = await fetch(`${API_URL}/api/bookings`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                        body: JSON.stringify(bookingPayload)
-                    });
-                    const bookingData = await bookingRes.json();
+                    const bookingData = await createBookingRequest(bookingPayload);
 
                     if (bookingData.status === 'success') {
                         fetch(`${API_URL}/api/payments/verify`, {
@@ -2931,24 +3391,26 @@ window.addEventListener('hashchange', () => {
 
 // ===== #77 LEADERBOARD VIEW =====
 function renderLeaderboard() {
+    const experts = getFeaturedExpertsData();
     appContainer.innerHTML = `
         <div class="page-transition container" style="position:relative;padding-bottom:6rem;margin-top:2rem;">
             <div class="breadcrumb"><a onclick="showView('home')">${loc[currentLang].navHome}</a> <span>›</span> <span>Leaderboard</span></div>
             <div class="section-head">
                 <span class="section-kicker">EXPERT DISCOVERY</span>
-                <h2 style="font-size:2.5rem;background:var(--gradient-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Top Rated Experts 🏆</h2>
+                <h2 style="font-size:2.5rem;background:var(--gradient-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Top Rated Experts</h2>
                 <p style="color:var(--text-muted);margin-top:1rem;">This screen now behaves more like an expert marketplace shortlist with profile depth, ETAs, and direct trust cues.</p>
             </div>
             <div class="experts-grid">
-                ${featuredExperts.map((expert, index) => `
+                ${experts.map((expert, index) => `
                     <div class="card expert-card">
+                        <div class="expert-portrait">
+                            <img src="${normalizeImageSrc(expert.image)}" alt="${expert.name}">
+                            <div class="leaderboard-rank rank-${Math.min(index + 1, 3)}" style="position:absolute;top:1rem;left:1rem;">${index < 3 ? ['🥇','🥈','🥉'][index] : index + 1}</div>
+                        </div>
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1rem;">
-                            <div style="display:flex;align-items:center;gap:1rem;">
-                                <div class="leaderboard-rank rank-${Math.min(index + 1, 3)}">${index < 3 ? ['🥇','🥈','🥉'][index] : index + 1}</div>
-                                <div>
-                                    <h4 style="margin-bottom:0.2rem;">${expert.name}</h4>
-                                    <p style="font-size:0.8rem;color:var(--text-muted);">${expert.role}</p>
-                                </div>
+                            <div>
+                                <h4 style="margin-bottom:0.2rem;">${expert.name}</h4>
+                                <p style="font-size:0.8rem;color:var(--text-muted);">${expert.role}</p>
                             </div>
                             <span class="availability-tag">${expert.eta}</span>
                         </div>
@@ -2979,7 +3441,7 @@ function renderCorporate() {
             <div class="breadcrumb"><a onclick="showView('home')">${loc[currentLang].navHome}</a> <span>›</span> <span>Corporate Bookings</span></div>
             <div class="section-head left">
                 <span class="section-kicker">SOCIETY AND OFFICE FLOW</span>
-                <h2 style="font-size:3rem;margin-bottom:1rem;background:var(--gradient-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Enterprise Solutions 🏢</h2>
+                <h2 style="font-size:3rem;margin-bottom:1rem;background:var(--gradient-hero);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Enterprise Solutions</h2>
                 <p style="font-size:1.05rem;line-height:1.7;color:var(--text-muted);">This view now positions Fixentra for offices, apartment societies, and facility managers with package clarity, SLA framing, and bulk-service credibility.</p>
             </div>
             <div class="mini-grid" style="margin-bottom:2rem;">
@@ -3516,3 +3978,198 @@ function shareReferral() {
     const text = `Hey! Use my code ${user.referralCode} to join Fixentra and get ₹100 off on your first home service in Patna! App: ${window.location.origin}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
 }
+
+// ===== #4 SCROLL REVEAL OBSERVER =====
+function initScrollReveal() {
+    const reveals = document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale, .stagger-children');
+    if (!reveals.length) return;
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('revealed');
+                // Also animate counters if they're in view
+                entry.target.querySelectorAll('.counter').forEach(el => {
+                    if (!el.dataset.animated) {
+                        el.dataset.animated = 'true';
+                        const target = parseInt(el.getAttribute('data-target'));
+                        const suffix = el.getAttribute('data-suffix') || '';
+                        let current = 0;
+                        const step = target / 60;
+                        const timer = setInterval(() => {
+                            current += step;
+                            if (current >= target) { current = target; clearInterval(timer); }
+                            el.textContent = Math.floor(current).toLocaleString() + suffix;
+                        }, 20);
+                    }
+                });
+            }
+        });
+    }, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+    reveals.forEach(el => observer.observe(el));
+}
+
+// ===== #5 SOCIAL PROOF TOASTS =====
+let socialProofTimer = null;
+const socialProofData = [
+    { name: 'Rahul', service: 'Deep Cleaning', area: 'Kankarbagh', time: '2 minutes ago' },
+    { name: 'Priya', service: 'AC Repair', area: 'Boring Road', time: '5 minutes ago' },
+    { name: 'Aman', service: 'Plumber Fix', area: 'Rajendra Nagar', time: '8 minutes ago' },
+    { name: 'Sneha', service: 'Electrician', area: 'Patliputra Colony', time: '12 minutes ago' },
+    { name: 'Vikram', service: 'Pest Control', area: 'Bailey Road', time: '15 minutes ago' },
+    { name: 'Neha', service: 'Wall Painting', area: 'Danapur', time: '18 minutes ago' },
+    { name: 'Arjun', service: 'Kitchen Cleaning', area: 'Kankarbagh', time: '3 minutes ago' },
+    { name: 'Ritu', service: 'Carpenter Work', area: 'Boring Road', time: '7 minutes ago' }
+];
+
+function initSocialProof() {
+    if (socialProofTimer) clearInterval(socialProofTimer);
+    let index = 0;
+    function showProof() {
+        const toast = document.getElementById('social-proof-toast');
+        if (!toast) return;
+        const data = socialProofData[index % socialProofData.length];
+        const textEl = document.getElementById('sp-text');
+        const timeEl = document.getElementById('sp-time');
+        if (textEl) textEl.innerHTML = `<strong>${data.name}</strong> just booked ${data.service} in <strong>${data.area}</strong>`;
+        if (timeEl) timeEl.textContent = data.time;
+        toast.classList.add('visible');
+        setTimeout(() => toast.classList.remove('visible'), 4000);
+        index++;
+    }
+    setTimeout(showProof, 5000);
+    socialProofTimer = setInterval(showProof, 15000);
+}
+
+// ===== #27 LIVE BOOKING COUNTER =====
+function initLiveCounter() {
+    const el = document.getElementById('live-booking-count');
+    if (!el) return;
+    let count = 47;
+    setInterval(() => {
+        count += Math.floor(Math.random() * 3) + 1;
+        el.textContent = count;
+    }, 8000);
+}
+
+// ===== #12 TESTIMONIAL CAROUSEL =====
+let testimonialSlide = 0;
+let testimonialAutoTimer = null;
+
+function getTestimonialSlidesCount() {
+    return window.innerWidth <= 768 ? 1 : 3;
+}
+
+function moveTestimonials(dir) {
+    const track = document.getElementById('testimonial-track');
+    if (!track) return;
+    const cards = track.querySelectorAll('.uc-testimonial-card');
+    const visibleCount = getTestimonialSlidesCount();
+    const maxSlide = Math.max(0, cards.length - visibleCount);
+    testimonialSlide = Math.max(0, Math.min(testimonialSlide + dir, maxSlide));
+    const cardWidth = 100 / visibleCount;
+    track.style.transform = `translateX(-${testimonialSlide * cardWidth}%)`;
+    updateTestimonialDots();
+}
+
+function goToTestimonial(index) {
+    testimonialSlide = index;
+    moveTestimonials(0);
+}
+
+function updateTestimonialDots() {
+    document.querySelectorAll('.t-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === testimonialSlide);
+    });
+}
+
+function initTestimonialAutoplay() {
+    if (testimonialAutoTimer) clearInterval(testimonialAutoTimer);
+    testimonialSlide = 0;
+    testimonialAutoTimer = setInterval(() => {
+        const track = document.getElementById('testimonial-track');
+        if (!track) { clearInterval(testimonialAutoTimer); return; }
+        const cards = track.querySelectorAll('.uc-testimonial-card');
+        const visibleCount = getTestimonialSlidesCount();
+        const maxSlide = Math.max(0, cards.length - visibleCount);
+        testimonialSlide = testimonialSlide >= maxSlide ? 0 : testimonialSlide + 1;
+        const cardWidth = 100 / visibleCount;
+        track.style.transform = `translateX(-${testimonialSlide * cardWidth}%)`;
+        updateTestimonialDots();
+    }, 4000);
+}
+
+// ===== #25 BUTTON RIPPLE EFFECT =====
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn');
+    if (!btn) return;
+    const ripple = document.createElement('span');
+    ripple.className = 'btn-ripple';
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+    btn.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+});
+
+// ===== #14 STICKY MOBILE CTA =====
+(function initStickyCTA() {
+    let lastScroll = 0;
+    window.addEventListener('scroll', function() {
+        const cta = document.getElementById('sticky-mobile-cta');
+        if (!cta || window.innerWidth > 768) return;
+        const scrollY = window.scrollY;
+        if (scrollY > 600 && scrollY > lastScroll) {
+            cta.classList.add('visible');
+        } else if (scrollY < 300) {
+            cta.classList.remove('visible');
+        }
+        lastScroll = scrollY;
+    }, { passive: true });
+})();
+
+// ===== #26 PWA INSTALL PROMPT =====
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    setTimeout(() => {
+        const banner = document.getElementById('pwa-install-banner');
+        if (banner && !localStorage.getItem('fixentra_pwa_dismissed')) {
+            banner.classList.add('visible');
+        }
+    }, 10000);
+});
+
+function installPWA() {
+    if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.then(choice => {
+            if (choice.outcome === 'accepted') {
+                showToast('Fixentra installed! Find it on your home screen.', 'success');
+            }
+            deferredInstallPrompt = null;
+            dismissPWABanner();
+        });
+    }
+}
+
+function dismissPWABanner() {
+    const banner = document.getElementById('pwa-install-banner');
+    if (banner) banner.classList.remove('visible');
+    localStorage.setItem('fixentra_pwa_dismissed', 'true');
+}
+
+// ===== #23 PARALLAX SCROLL EFFECT =====
+window.addEventListener('scroll', function() {
+    const dots = document.querySelectorAll('.parallax-dot');
+    if (!dots.length) return;
+    const scrollY = window.scrollY;
+    dots.forEach((dot, i) => {
+        const speed = 0.02 + (i * 0.01);
+        dot.style.transform = `translateY(${scrollY * speed * (i % 2 === 0 ? -1 : 1)}px)`;
+    });
+}, { passive: true });
+

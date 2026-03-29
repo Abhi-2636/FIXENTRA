@@ -54,6 +54,19 @@ const bookingSchema = new mongoose.Schema({
         trim: true,
         default: null
     },
+    issuePhotoUrl: {
+        type: String,
+        trim: true,
+        default: null
+    },
+    estimatedArrivalMins: {
+        type: Number,
+        default: null
+    },
+    matchedProviderCount: {
+        type: Number,
+        default: 0
+    },
     priorityType: {
         type: String,
         enum: ['standard', 'emergency'],

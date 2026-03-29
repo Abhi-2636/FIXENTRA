@@ -1,18 +1,25 @@
-const Review = require('../models/Review');
+const { supabaseAdmin } = require('../config/supabase');
 
 exports.createReview = async (req, res) => {
     try {
         const { providerId, rating, comment } = req.body;
-        const newReview = await Review.create({
-            userId: req.user._id,
-            providerId,
-            rating,
-            comment
-        });
+
+        const { data: newReview, error } = await supabaseAdmin
+            .from('reviews')
+            .insert({
+                user_id: req.user.id,
+                provider_id: providerId,
+                rating,
+                comment
+            })
+            .select()
+            .single();
+
+        if (error) throw new Error(error.message);
 
         res.status(201).json({
             status: 'success',
-            data: { review: newReview }
+            data: { review: { ...newReview, _id: newReview.id } }
         });
     } catch (err) {
         res.status(400).json({ message: err.message });
@@ -21,13 +28,21 @@ exports.createReview = async (req, res) => {
 
 exports.getProviderReviews = async (req, res) => {
     try {
-        const reviews = await Review.find({ providerId: req.params.providerId })
-            .populate('userId', 'name');
+        const { data: reviews, error } = await supabaseAdmin
+            .from('reviews')
+            .select(`
+                *,
+                user:users!reviews_user_id_fkey(id, name)
+            `)
+            .eq('provider_id', req.params.providerId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw new Error(error.message);
 
         res.status(200).json({
             status: 'success',
             results: reviews.length,
-            data: { reviews }
+            data: { reviews: reviews.map(r => ({ ...r, _id: r.id })) }
         });
     } catch (err) {
         res.status(404).json({ message: err.message });

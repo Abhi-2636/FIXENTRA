@@ -1,21 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <defs>
-    <linearGradient id="g1" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#4f46e5"/>
-      <stop offset="100%" stop-color="#06b6d4"/>
+    <linearGradient id="fixentraBg" x1="8" y1="6" x2="56" y2="58" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f62fe"/>
+      <stop offset="55%" stop-color="#13a3e7"/>
+      <stop offset="100%" stop-color="#0f9f8f"/>
     </linearGradient>
-    <linearGradient id="g2" x1="10" y1="10" x2="38" y2="38" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#6366f1"/>
-      <stop offset="100%" stop-color="#3b82f6"/>
+    <linearGradient id="fixentraAccent" x1="24" y1="24" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ff9a3d"/>
+      <stop offset="100%" stop-color="#ff6a13"/>
     </linearGradient>
   </defs>
-  <!-- Rounded square background -->
-  <rect x="2" y="2" width="44" height="44" rx="12" fill="url(#g1)"/>
-  <!-- House roof -->
-  <path d="M24 10L10 22h4v12h20V22h4L24 10z" fill="white" opacity="0.15"/>
-  <path d="M24 12L12 22h3.5v10h17V22H36L24 12z" fill="none" stroke="white" stroke-width="2" stroke-linejoin="round"/>
-  <!-- Wrench icon inside house -->
-  <path d="M28.5 21a3.5 3.5 0 0 0-3.2 2.1l-5.8 5.8a1.2 1.2 0 1 0 1.7 1.7l5.8-5.8A3.5 3.5 0 1 0 28.5 21z" fill="white" opacity="0.9"/>
-  <!-- Dot accent -->
-  <circle cx="20" cy="29" r="1.2" fill="#06b6d4"/>
+
+  <rect x="4" y="4" width="56" height="56" rx="20" fill="url(#fixentraBg)"/>
+  <path d="M18 27.5L32 16L46 27.5V44.5C46 47.2614 43.7614 49.5 41 49.5H23C20.2386 49.5 18 47.2614 18 44.5V27.5Z" fill="white" fill-opacity="0.14"/>
+  <path d="M21 28.5L32 19.5L43 28.5V43C43 45.2091 41.2091 47 39 47H25C22.7909 47 21 45.2091 21 43V28.5Z" stroke="white" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M19 29L32 18L45 29" stroke="white" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M27.5 47V36.8C27.5 35.8059 28.3059 35 29.3 35H34.7C35.6941 35 36.5 35.8059 36.5 36.8V47" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  <path d="M36.4 25.1C34.7303 25.1 33.3437 26.313 33.0751 27.9067L25.7672 35.2146C24.9071 36.0747 24.9071 37.4693 25.7672 38.3294C26.6273 39.1895 28.0219 39.1895 28.882 38.3294L36.1899 31.0215C37.7836 30.7529 38.9966 29.3663 38.9966 27.6966C38.9966 26.0353 37.6507 24.6894 35.9894 24.6894C35.8441 24.6894 35.7008 24.6998 35.5607 24.7198L37.2925 26.4516L35.0577 28.6863L33.3259 26.9545C33.3059 27.0947 33.2955 27.2379 33.2955 27.3832" fill="url(#fixentraAccent)"/>
+  <circle cx="45.5" cy="19" r="4.5" fill="#08142f" fill-opacity="0.14"/>
+  <path d="M45.5 15.8V22.2M42.3 19H48.7" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
 </svg>

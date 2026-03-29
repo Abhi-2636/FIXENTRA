@@ -1,6 +1,5 @@
 require('dotenv').config();
-const mongoose = require('mongoose');
-const Service = require('./models/Service');
+const { supabaseAdmin } = require('./config/supabase');
 
 const services = [
     {
@@ -97,14 +96,22 @@ const services = [
 
 const seedDB = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log('Seed: Connected to DB.');
+        console.log('Seed: Connecting to Supabase...');
         
-        await Service.deleteMany();
+        const { error: clearError } = await supabaseAdmin
+            .from('services')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+            
+        if (clearError) throw new Error(clearError.message);
         console.log('Seed: Cleared old services.');
         
-        await Service.insertMany(services);
-        console.log('Seed: Success! Added Indian services with INR pricing.');
+        const { error: insertError } = await supabaseAdmin
+            .from('services')
+            .insert(services);
+            
+        if (insertError) throw new Error(insertError.message);
+        console.log('Seed: Success! Added Indian services with INR pricing to Supabase.');
         
         process.exit();
     } catch (err) {

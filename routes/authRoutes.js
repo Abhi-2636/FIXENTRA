@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const authController = require('../controllers/authController');
+const { providerUpload } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -10,10 +11,18 @@ const validate = (req, res, next) => {
     next();
 };
 
-router.post('/register', [
+router.post('/request-register-otp', [
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+], validate, authController.requestRegistrationOtp);
+
+router.post('/register', [
+    body('name').trim().notEmpty().withMessage('Name is required'),
+    body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('verificationToken').notEmpty().withMessage('Verification token is required'),
+    body('verificationCode').isLength({ min: 6, max: 6 }).withMessage('Verification code must be 6 digits')
 ], validate, authController.register);
 
 router.post('/login', [
@@ -33,7 +42,8 @@ router.patch('/reset-password', [
 ], validate, authController.resetPassword);
 
 const { protect, restrictTo } = require('../middleware/auth');
-router.patch('/update-me', protect, authController.updateMe);
+router.get('/providers/public', authController.getPublicProviderCatalog);
+router.patch('/update-me', protect, providerUpload.single('profileImage'), authController.updateMe);
 router.get('/providers', protect, restrictTo('admin'), authController.getProviders);
 
 router.get('/config', (req, res) => {

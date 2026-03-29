@@ -36,6 +36,8 @@ const userSchema = new mongoose.Schema({
     experience: { type: Number, default: 0 },
     rating: { type: Number, default: 4.5 },
     completedJobs: { type: Number, default: 0 },
+    workingLocalities: [String],
+    responseTimeMins: { type: Number, default: 18 },
     phone: {
         type: String,
         required: [true, 'Please provide your phone number']

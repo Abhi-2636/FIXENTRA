@@ -4,8 +4,8 @@
   "description": "Patna's Trusted Premium Home Services Platform. Book verified electricians, plumbers, and cleaning professionals instantly.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f8fafc",
-  "theme_color": "#4f46e5",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0f62fe",
   "icons": [
     {
       "src": "logo.svg",

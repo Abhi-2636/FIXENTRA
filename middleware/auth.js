@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { supabaseAdmin } = require('../config/supabase');
 
 exports.protect = async (req, res, next) => {
     try {
@@ -12,17 +12,23 @@ exports.protect = async (req, res, next) => {
             return res.status(401).json({ message: 'You are not logged in! Please log in to get access.' });
         }
 
-        // Verify token
+        // Verify JWT token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Find user
-        const currentUser = await User.findById(decoded.id);
-        if (!currentUser) {
+        // Find user in Supabase
+        const { data: currentUser, error } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('id', decoded.id)
+            .single();
+
+        if (error || !currentUser) {
             return res.status(401).json({ message: 'The user belonging to this token no longer exists.' });
         }
 
         // Grant access
         req.user = currentUser;
+        req.user._id = currentUser.id; // Compatibility alias
         next();
     } catch (error) {
         return res.status(401).json({ message: 'Invalid token. Please log in again!' });

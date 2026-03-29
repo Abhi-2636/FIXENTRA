@@ -4,11 +4,12 @@ const morgan = require('morgan');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const mongoSanitize = require('express-mongo-sanitize');
 const compression = require('compression');
 const path = require('path');
-const connectDB = require('./config/db');
 const errorHandler = require('./middleware/error');
+
+// Verify Supabase config
+const { supabaseAdmin } = require('./config/supabase');
 
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
@@ -22,27 +23,22 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 
 const app = express();
 
-// Connect to Database
-connectDB();
-
-// ===== #41 SECURITY MIDDLEWARE =====
-// Helmet - secure HTTP headers  
+// ===== SECURITY MIDDLEWARE =====
 app.use(helmet({
-    contentSecurityPolicy: false, // Allow inline scripts for our SPA
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false
 }));
 
-// Rate Limiting - prevent brute force
+// Rate Limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 200, // limit each IP to 200 requests per window
+    windowMs: 15 * 60 * 1000,
+    max: 200,
     message: { status: 'error', message: 'Too many requests. Please try again later.' },
     standardHeaders: true,
     legacyHeaders: false
 });
 app.use('/api/', limiter);
 
-// Strict rate limit on auth routes
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
@@ -53,8 +49,15 @@ app.use('/api/auth/', authLimiter);
 // Core Middlewares
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
-app.use(compression()); // Compress all responses
-app.use(express.static('public'));
+app.use(compression());
+app.use(express.static('public', {
+    etag: false,
+    maxAge: 0,
+    setHeaders: (res) => {
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.set('Pragma', 'no-cache');
+    }
+}));
 app.use('/uploads', express.static('uploads'));
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
@@ -101,15 +104,13 @@ app.set('io', io);
 // Handle WebSockets
 io.on('connection', (socket) => {
     console.log(`🔌 New client connected: ${socket.id}`);
-    
-    // Join a room based on booking ID
+
     socket.on('join_booking', (bookingId) => {
         socket.join(bookingId);
         console.log(`User joined booking room: ${bookingId}`);
     });
 
     socket.on('send_message', (data) => {
-        // Broadcast message to everyone in the room except sender
         socket.to(data.bookingId).emit('receive_message', data);
     });
 
@@ -120,17 +121,14 @@ io.on('connection', (socket) => {
 
 server.listen(PORT, () => {
     console.log(`🚀 Fixentra running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    console.log(`✅ Backend: Supabase (PostgreSQL)`);
 });
 
-// Graceful Shutdown (#30)
+// Graceful Shutdown
 process.on('SIGTERM', () => {
     console.log('SIGTERM signal received: closing HTTP server');
     server.close(() => {
         console.log('HTTP server closed');
-        const mongoose = require('mongoose');
-        mongoose.connection.close(false, () => {
-            console.log('MongoDB connection closed');
-            process.exit(0);
-        });
+        process.exit(0);
     });
 });

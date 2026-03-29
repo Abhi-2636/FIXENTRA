@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const bookingController = require('../controllers/bookingController');
 const { protect, restrictTo } = require('../middleware/auth');
+const { issueUpload } = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -19,7 +20,7 @@ router.post('/', restrictTo('user'), [
     body('address').notEmpty().withMessage('Address is required'),
     body('date').notEmpty().withMessage('Date is required'),
     body('timeSlot').notEmpty().withMessage('Time slot is required')
-], validate, bookingController.createBooking);
+], issueUpload.single('issuePhoto'), validate, bookingController.createBooking);
 
 router.get('/history', restrictTo('user'), bookingController.getUserHistory);
 router.patch('/:id/cancel', restrictTo('user'), bookingController.cancelBooking);

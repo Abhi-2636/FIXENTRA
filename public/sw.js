@@ -1,33 +1,31 @@
-// Fixentra Advanced Service Worker for PWA (Tier 5 Upgrade)
-const CACHE_NAME = 'fixentra-v3-cache';
+// Fixentra Service Worker v6 - Network-First for all static assets
+const CACHE_NAME = 'fixentra-v6-full';
 const urlsToCache = ['/', '/index.html', '/styles.css', '/app.js', '/manifest.json'];
 
 self.addEventListener('install', event => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
     );
 });
 
-// Activate Event (Cleanup Old Caches)
 self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys().then(keys => {
-            return Promise.all(keys.map(key => {
-                if (key !== CACHE_NAME) return caches.delete(key);
-            }));
-        })
+        caches.keys().then(keys =>
+            Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+        ).then(() => self.clients.claim())
     );
 });
 
-// Network-First for API, Cache-First for Static
+// Network-First for everything - always get fresh content
 self.addEventListener('fetch', event => {
-    if (event.request.url.includes('/api/')) {
-        event.respondWith(
-            fetch(event.request).catch(() => caches.match(event.request))
-        );
-    } else {
-        event.respondWith(
-            caches.match(event.request).then(response => response || fetch(event.request))
-        );
-    }
+    event.respondWith(
+        fetch(event.request)
+            .then(response => {
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                return response;
+            })
+            .catch(() => caches.match(event.request))
+    );
 });

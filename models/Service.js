@@ -24,6 +24,22 @@ const serviceSchema = new mongoose.Schema({
         type: String,
         default: 'service-default.png'
     },
+    gallery: {
+        type: [String],
+        default: []
+    },
+    included: {
+        type: [String],
+        default: []
+    },
+    durationMins: {
+        type: Number,
+        default: 60
+    },
+    baseEta: {
+        type: Number,
+        default: 28
+    },
     rating: {
         type: Number,
         default: 4.8
