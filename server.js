@@ -96,39 +96,49 @@ const { Server } = require('socket.io');
 
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+
+// Mock IO behavior for serverless environments since WebSockets break
+const mockIo = { on: () => {}, emit: () => {}, to: () => ({ emit: () => {} }) };
+const io = process.env.SERVERLESS ? mockIo : new Server(server, { cors: { origin: '*' } });
 
 // Attach socket IO to app so routes can use it
 app.set('io', io);
 
-// Handle WebSockets
-io.on('connection', (socket) => {
-    console.log(`🔌 New client connected: ${socket.id}`);
+// Handle WebSockets (only runs locally/containers)
+if (!process.env.SERVERLESS) {
+    io.on('connection', (socket) => {
+        console.log(`🔌 New client connected: ${socket.id}`);
 
-    socket.on('join_booking', (bookingId) => {
-        socket.join(bookingId);
-        console.log(`User joined booking room: ${bookingId}`);
+        socket.on('join_booking', (bookingId) => {
+            socket.join(bookingId);
+            console.log(`User joined booking room: ${bookingId}`);
+        });
+
+        socket.on('send_message', (data) => {
+            socket.to(data.bookingId).emit('receive_message', data);
+        });
+
+        socket.on('disconnect', () => {
+            console.log(`🔌 Client disconnected: ${socket.id}`);
+        });
+    });
+}
+
+if (!process.env.SERVERLESS) {
+    server.listen(PORT, () => {
+        console.log(`🚀 Fixentra running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+        console.log(`✅ Backend: Supabase (PostgreSQL)`);
     });
 
-    socket.on('send_message', (data) => {
-        socket.to(data.bookingId).emit('receive_message', data);
+    // Graceful Shutdown
+    process.on('SIGTERM', () => {
+        console.log('SIGTERM signal received: closing HTTP server');
+        server.close(() => {
+            console.log('HTTP server closed');
+            process.exit(0);
+        });
     });
+}
 
-    socket.on('disconnect', () => {
-        console.log(`🔌 Client disconnected: ${socket.id}`);
-    });
-});
-
-server.listen(PORT, () => {
-    console.log(`🚀 Fixentra running in ${process.env.NODE_ENV} mode on port ${PORT}`);
-    console.log(`✅ Backend: Supabase (PostgreSQL)`);
-});
-
-// Graceful Shutdown
-process.on('SIGTERM', () => {
-    console.log('SIGTERM signal received: closing HTTP server');
-    server.close(() => {
-        console.log('HTTP server closed');
-        process.exit(0);
-    });
-});
+// Export app for serverless wrappers
+module.exports = app;

@@ -2,7 +2,7 @@
 // State
 let user = JSON.parse(localStorage.getItem('fixentra_user')) || null;
 let token = localStorage.getItem('fixentra_token') || null;
-const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8080' : window.location.origin;
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? 'http://localhost:8080' : '';
 
 let GOOGLE_CLIENT_ID = ''; // Will be hydrated from backend automatically
 let allServices = [];
