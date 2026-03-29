@@ -8,8 +8,8 @@ const { getPublicProviders, resolveProviderImage } = require('../utils/catalog')
 const registrationOtpStore = new Map();
 
 const signToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_EXPIRES_IN
+    return jwt.sign({ id }, process.env.JWT_SECRET || 'secret', {
+        expiresIn: process.env.JWT_EXPIRES_IN || '30d'
     });
 };
 

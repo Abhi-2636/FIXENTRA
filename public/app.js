@@ -864,15 +864,23 @@ function initUI() {
         `;
         const ml = document.getElementById('mobile-login');
         const md = document.getElementById('mobile-dashboard');
+        const mlo = document.getElementById('mobile-logout');
+        const ms = document.querySelector('.mobile-nav .btn-primary');
         if (ml) ml.style.display = 'none';
         if (md) md.style.display = 'block';
+        if (mlo) mlo.style.display = 'block';
+        if (ms) ms.style.display = 'none';
     } else {
         authBtns.style.display = 'flex';
         userMenu.style.display = 'none';
         const ml = document.getElementById('mobile-login');
         const md = document.getElementById('mobile-dashboard');
+        const mlo = document.getElementById('mobile-logout');
+        const ms = document.querySelector('.mobile-nav .btn-primary');
         if (ml) ml.style.display = 'block';
         if (md) md.style.display = 'none';
+        if (mlo) mlo.style.display = 'none';
+        if (ms) ms.style.display = 'block';
     }
 
     const requestedRoute = getRouteFromLocation();
@@ -2764,7 +2772,8 @@ function logout() {
     localStorage.removeItem('fixentra_token');
     localStorage.removeItem('fixentra_user');
     user = null; token = null;
-    showToast('Logged out successfully.', 'info');
+    showToast('Logged out successfully. See you again! 👋', 'info');
+    showView('home');
     initUI();
 }
 

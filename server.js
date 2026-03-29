@@ -63,7 +63,7 @@ app.use(express.static('public', {
 app.use('/uploads', express.static('uploads'));
 app.use(cors({
     origin: process.env.NODE_ENV === 'production'
-        ? ['https://fixentra.com', 'https://www.fixentra.com']
+        ? ['https://fixentra.com', 'https://www.fixentra.com', 'https://fixentra.onrender.com', 'https://fixentra.netlify.app']
         : '*',
     credentials: true
 }));
