@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 
-const uploadRoot = path.join(process.cwd(), 'uploads');
+const uploadRoot = process.env.SERVERLESS ? path.join('/tmp', 'uploads') : path.join(process.cwd(), 'uploads');
 
 const ensureDirectory = (dirPath) => {
     fs.mkdirSync(dirPath, { recursive: true });
